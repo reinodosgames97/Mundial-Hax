@@ -1,0 +1,13 @@
+{
+  "name": "Mundial Hax",
+  "short_name": "Mundial Hax",
+  "description": "Futebol arcade de física com modo carreira de clubes.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0e1512",
+  "theme_color": "#0e1512",
+  "lang": "pt-BR",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

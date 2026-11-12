@@ -1,0 +1,11 @@
+{
+  "name": "mundial-hax",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Futebol de botão físico (estilo arcade top-down) com modo carreira de clubes brasileiros.",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node tools/test-season.mjs"
+  }
+}

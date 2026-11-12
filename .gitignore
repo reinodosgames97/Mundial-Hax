@@ -1,0 +1,6 @@
+node_modules/
+tools/data/cache/
+tools/data/*.json
+tools/data/*.log
+shots/
+.DS_Store
