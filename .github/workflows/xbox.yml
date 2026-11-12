@@ -33,6 +33,16 @@ jobs:
           "CERT_SENHA=$senha" | Out-File -FilePath $env:GITHUB_ENV -Append
           "CERT_DIGITAL=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      # Cada execução vira uma versão nova (1.0.<nº da execução>.0), para o Xbox aceitar como atualização.
+      - name: Numerar a versão
+        shell: pwsh
+        run: |
+          $f = "xbox\MundialHax\Package.appxmanifest"
+          $v = "1.0.$($env:GITHUB_RUN_NUMBER).0"
+          (Get-Content $f -Raw) -replace '(<Identity [^>]*Version=")[^"]+', "`${1}$v" | Set-Content $f -Encoding utf8
+          Select-String -Path $f -Pattern "<Identity"
+          Write-Host "Versão do pacote: $v"
+
       # A imagem do GitHub muda de tempos em tempos; usa o SDK UWP mais novo que estiver instalado.
       - name: Detectar Windows SDK (UWP)
         shell: pwsh
@@ -71,6 +81,16 @@ jobs:
           Write-Host "Arquivos do jogo presentes no pacote."
           Get-ChildItem -Path pacote -Recurse -File | ForEach-Object { Write-Host $_.FullName.Replace("$env:GITHUB_WORKSPACE\", "") }
 
+      # Pacote leve: só o .msix e o certificado (as dependências já instaladas no console continuam valendo).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MundialHax-Xbox-leve
+          path: |
+            pacote/**/*.msix
+            pacote/**/*.cer
+          if-no-files-found: error
+
+      # Pacote completo, com as dependências de todas as arquiteturas.
       - uses: actions/upload-artifact@v4
         with:
           name: MundialHax-Xbox

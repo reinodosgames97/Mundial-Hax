@@ -6,5 +6,12 @@
     Background="#0E1512">
     <Grid Background="#0E1512">
         <controls:WebView2 x:Name="Web" IsTabStop="True" />
+        <!-- Cobre o jogo enquanto carrega e mostra o motivo se algo der errado. -->
+        <Grid x:Name="Overlay" Background="#0E1512">
+            <ScrollViewer Padding="48">
+                <TextBlock x:Name="Status" Text="Carregando…" FontSize="22" Foreground="#EEF3EF"
+                           TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Page>
