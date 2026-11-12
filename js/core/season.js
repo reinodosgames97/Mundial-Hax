@@ -3,6 +3,7 @@ import { DEFS, ORDER, R, UFS, EU_LEAGUES, isCwcYear, serieCSize, COMP_NAMES, slo
 import { stageMatches, played, score, setScore, stageDone, settleTies, aggregate, table, order } from "./stages.js";
 import { clubs, club, INIT, TITLES, conf, CSA, FED_RANK, findClub } from "./db.js";
 import { rnd, gauss, poisson } from "./rng.js";
+import { squadOf, bestXI, validXI, pickScorer, defaultFormation } from "./squads.js";
 
 export const SAVE_VERSION = 1;
 export const DIFFS = ["Fácil", "Normal", "Difícil", "Lendário"];
@@ -21,7 +22,61 @@ export function simGoals(G, h, a, neutral) {
 }
 const pensProb = G => (a, b) => clamp(0.5 + (R(G, a) - R(G, b)) * 0.004, 0.35, 0.65);
 
+/* ---------------------------- elenco e artilharia ---------------------------- */
+const xiCache = new Map();
+export function lineupOf(G, id) {
+  if (id === G.userClub) {
+    if (!G.lineup || !validXI(id, G.lineup.form, G.lineup.xi)) { const form = defaultFormation(id); G.lineup = { form, xi: bestXI(id, form) }; }
+    return G.lineup;
+  }
+  if (!xiCache.has(id)) { const form = defaultFormation(id); xiCache.set(id, { form, xi: bestXI(id, form) }); }
+  return xiCache.get(id);
+}
+const MAIN_TRACK = ["BRA", "BRB", "BRC", "BRD", "CDB", "SUP", "LIB", "SUL", "REC", "CWC", "INT", "UCL"];
+function setTrack(G) {
+  const c = club(G.userClub), t = MAIN_TRACK.slice();
+  if (c.uf) t.push("E_" + c.uf);
+  for (const [id, v] of Object.entries(EU_LEAGUES)) if (v[1] === c.cc) t.push(id);
+  G.track = t;
+}
+function credit(G, compId, clubId, idx) { const m = (G.goals[compId] ||= {}), k = clubId + "_" + idx; m[k] = (m[k] || 0) + 1; }
+function simScorers(G, compId, clubId, n) {
+  if (!n || !G.track.includes(compId)) return;
+  const xi = lineupOf(G, clubId).xi;
+  for (let i = 0; i < n; i++) credit(G, compId, clubId, pickScorer(clubId, xi, rnd()));
+}
+export function topScorers(G, compId, n = 20) {
+  return Object.entries(G.goals[compId] || {}).map(([k, g]) => { const [c, i] = k.split("_").map(Number); return { club: c, i, name: squadOf(c)[i]?.name || "?", goals: g }; })
+    .sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name)).slice(0, n);
+}
+export function playerGoals(G, clubId, idx) {
+  let n = 0; const k = clubId + "_" + idx;
+  for (const m of Object.values(G.goals)) n += m[k] || 0;
+  return n;
+}
+
 /* ---------------------------- classificação continental ---------------------------- */
+// Vagas do Brasil: G = fase de grupos da Libertadores, P = preliminar, S = Sul-Americana.
+// Campeões continentais ganham vaga extra; quem já está classificado abre vaga para o próximo da tabela
+// (o "G5" vira "G6", "G7"...). Com as copas ainda em aberto, as vagas delas ficam reservadas.
+export function brContinental(G, final = false) {
+  const C = G.comps, A = C.BRA;
+  const aAll = A.x.order || order(A.stages[0], t => R(G, t));
+  const known = c => (c && c.done ? c : null);
+  const lib = known(C.LIB)?.champion ?? null, sul = known(C.SUL)?.champion ?? null, cdb = known(C.CDB);
+  const cont = [lib, sul].filter(x => x != null);
+  const aOrder = aAll.filter(id => !cont.includes(id));
+  const g = [], p = [], s = [], used = new Set(cont);
+  const add = (arr, id) => { if (id != null && !used.has(id)) { used.add(id); arr.push(id); return true; } return false; };
+  let gLeft = 5, pLeft = 2;
+  if (cdb) { if (add(g, cdb.champion)) gLeft--; } else if (!final) gLeft--;       // vaga do campeão da Copa do Brasil
+  for (const id of aOrder) { if (gLeft <= 0) break; if (add(g, id)) gLeft--; }
+  if (cdb) { if (add(p, cdb.runner)) pLeft--; } else if (!final) pLeft--;         // vaga do vice
+  for (const id of aOrder) { if (pLeft <= 0) break; if (add(p, id)) pLeft--; }
+  for (const id of aOrder) { if (s.length >= 6) break; add(s, id); }
+  return { g, p, s, champs: cont.filter(id => club(id).cc === "BR") };
+}
+
 const LIB_QUOTA = { BR: [5, 2, 0, 6], AR: [5, 1, 0, 6], CO: [2, 2, 0, 4], CL: [2, 2, 0, 4] };
 function conmebolQual(G, libChamp, sulChamp) {
   const champs = uniq([libChamp, sulChamp].filter(x => x != null));
@@ -102,7 +157,8 @@ function cwcQual(G) {
 export function newGame({ clubId, coach = "Treinador", diff = 1, opts = {} }) {
   const G = {
     v: SAVE_VERSION, season: INIT.season, userClub: clubId, coach, diff,
-    opts: { mins: 3, size: 4, autoSwitch: true, sound: true, ...opts },
+    opts: { mins: 6, autoSwitch: true, sound: true, stick: "fixed", ...opts },
+    lineup: null, goals: {}, track: [],
     r: {}, boost: {},
     div: { A: INIT.div.A.slice(), B: INIT.div.B.slice(), C: INIT.div.C.slice(), D: INIT.div.D.slice() },
     leagues: Object.fromEntries(Object.entries(INIT.leagues).map(([k, v]) => [k, v.slice()])),
@@ -132,7 +188,8 @@ export function newGame({ clubId, coach = "Treinador", diff = 1, opts = {} }) {
 }
 
 export function buildSeason(G) {
-  G.comps = {}; G.log = []; G.slot = -1;
+  G.comps = {}; G.log = []; G.slot = -1; G.goals = {};
+  setTrack(G); lineupOf(G, G.userClub);
   for (const id of ORDER) { const c = DEFS[id].create(G); if (c) G.comps[id] = c; }
   progress(G);
 }
@@ -167,7 +224,11 @@ export function nextSlot(G) {
 const matchesAt = (G, slot) => [...liveMatches(G)].filter(x => x.slot === slot);
 const isUser = (G, x) => x.h === G.userClub || x.a === G.userClub;
 
-function simOne(G, x) { const [hg, ag] = simGoals(G, x.h, x.a, x.neutral); setScore(x, hg, ag); }
+function simOne(G, x) {
+  const [hg, ag] = simGoals(G, x.h, x.a, x.neutral);
+  setScore(x, hg, ag);
+  if (x.comp && G.track.includes(x.comp.id)) { simScorers(G, x.comp.id, x.h, hg); simScorers(G, x.comp.id, x.a, ag); }
+}
 
 // descreve um jogo do usuário para a interface
 export function describe(G, x) {
@@ -200,11 +261,18 @@ export function step(G) {
   return { type: "end" };
 }
 
-// Registra o resultado do jogo do usuário. res = { hg, ag, pen: [mandante, visitante] | null }
+// Registra o resultado do jogo do usuário. res = { hg, ag, pen: [mandante, visitante] | null, scorers?: [[clube, índice no elenco]] }
 export function playUser(G, d, res) {
   const x = d.x, me = G.userClub;
   let { hg, ag, pen } = res;
   setScore(x, hg, ag);
+  if (G.track.includes(d.compId)) {
+    if (res.scorers) {
+      const cnt = { [x.h]: 0, [x.a]: 0 };
+      for (const [c, i] of res.scorers) { credit(G, d.compId, c, i); cnt[c]++; }
+      simScorers(G, d.compId, x.h, hg - cnt[x.h]); simScorers(G, d.compId, x.a, ag - cnt[x.a]);   // gols contra etc.
+    } else { simScorers(G, d.compId, x.h, hg); simScorers(G, d.compId, x.a, ag); }
+  }
   if (x.ko && d.decisive) {
     const [A, B] = aggregate(x.tie);
     if (A === B) {
@@ -363,14 +431,8 @@ export function endSeason(G) {
 
   // 4) vagas continentais
   const libChamp = C.LIB.champion, sulChamp = C.SUL.champion, cont = [libChamp, sulChamp];
-  const aOrder = A.order.filter(id => !cont.includes(id));
-  const br = [], push = id => { if (id != null && !br.includes(id) && !cont.includes(id)) br.push(id); };
-  push(C.CDB.champion);
-  for (const id of aOrder) { if (br.length >= 5) break; push(id); }
-  push(C.CDB.runner);
-  for (const id of aOrder) { if (br.length >= 7) break; push(id); }
-  for (const id of aOrder) { if (br.length >= 13) break; push(id); }
-  sum.lib = br.slice(0, 7).concat(cont.filter(id => id != null && club(id).cc === "BR")); sum.sul = br.slice(7, 13);
+  const bc = brContinental(G, true), br = [...bc.g, ...bc.p, ...bc.s];
+  sum.lib = [...bc.g, ...bc.p, ...bc.champs]; sum.sul = bc.s;
   G.rank.BR = br.concat(byRating(G, [...clubs.values()].filter(c => c.cc === "BR" && !br.includes(c.id) && newDivs[c.id] === "A").map(c => c.id)));
   for (const cc of CSA) if (cc !== "BR") G.rank[cc] = [...clubs.values()].filter(c => c.cc === cc).map(c => [c.id, R(G, c.id) + gauss() * 4]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   const cq = conmebolQual(G, libChamp, sulChamp);
@@ -427,7 +489,8 @@ export function endSeason(G) {
 }
 function byRating(G, ids) { return ids.slice().sort((a, b) => R(G, b) - R(G, a) || a - b); }
 
-export function changeClub(G, id) { G.userClub = id; }
+export function changeClub(G, id) { G.userClub = id; G.lineup = null; lineupOf(G, id); setTrack(G); }
+export function setFormation(G, form) { G.lineup = { form, xi: bestXI(G.userClub, form) }; }
 
 /* ---------------------------- salvar / carregar ---------------------------- */
 const KEY = "mundialhax.save.v1";
@@ -440,6 +503,12 @@ export function load() {
     if (!s) return null;
     const G = JSON.parse(s);
     if (G.v !== SAVE_VERSION || !clubs.has(G.userClub)) return null;
+    // saves antigos (antes do 11 x 11)
+    G.goals ||= {}; G.opts ||= {}; delete G.opts.size;
+    if (![4, 6, 8, 10].includes(G.opts.mins)) G.opts.mins = 6;
+    G.opts.stick ||= "fixed";
+    if (!G.track || !G.track.length) setTrack(G);
+    lineupOf(G, G.userClub);
     return G;
   } catch (e) { return null; }
 }

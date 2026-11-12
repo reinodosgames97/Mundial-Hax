@@ -1,20 +1,35 @@
 # Mundial Hax
 
-Futebol arcade de física (visão de cima, jogadores em disco, bola que bate na parede) com **modo carreira de clubes**. Você escolhe um clube, joga cada partida no campinho e atravessa temporadas inteiras: estadual, Brasileirão, copas, competições continentais e mundiais — com acesso, rebaixamento, vagas, títulos e estatísticas salvos no aparelho.
+Futebol **11 contra 11** visto de cima, com os elencos dos clubes e **modo carreira**. Você escolhe um clube, escala o time, joga cada partida (passe, chute, bote, corrida) e atravessa temporadas inteiras: estadual, Brasileirão, copas, competições continentais e mundiais — com acesso, rebaixamento, vagas, títulos, artilharia e estatísticas salvos no aparelho.
 
-Feito para **celular** (toque), mas também funciona no computador (teclado). Não tem instalação nem etapa de build: é HTML, CSS e JavaScript puro.
+Funciona no **celular** (toque), no **computador** (teclado ou controle) e no **Xbox** (controle; veja [`xbox/`](xbox/README.md)). Não tem instalação nem etapa de build: é HTML, CSS e JavaScript puro.
 
 ## Como jogar
 
-- **Mover:** arraste o dedo no lado esquerdo da tela (joystick flutuante).
-- **Chutar:** segure `CHUTE`; o chute sai quando o jogador encosta na bola, na direção jogador → bola.
-- **Trocar:** `TROCAR` passa o controle para o companheiro mais perto da bola. O goleiro é sempre automático. A troca automática pode ser desligada nas opções.
-- Não há lateral, escanteio nem falta: a bola quica nas paredes e o jogo não para.
-- Mata-mata empatado: prorrogação de 1 minuto com **gol de ouro** e, se ninguém marcar, **pênaltis** (toque no canto para bater ou para pular).
-- Em pé o campo fica vertical (você ataca para cima); deitado o campo fica maior.
-- Teclado: setas ou WASD para mover, espaço ou X para chutar, C para trocar, P/Esc para pausar.
+| Ação | Toque | Controle (Xbox) | Teclado |
+| --- | --- | --- | --- |
+| Mover | Analógico fixo à esquerda | Analógico esquerdo / direcional | Setas ou WASD |
+| Passe | `PASSE` (toque rápido) | A | J ou Z |
+| Passe alto / lançamento | segure `PASSE` | segure A | segure J ou Z |
+| Chute | segure `CHUTE` para dar força | X ou B | K ou X |
+| Correr | `CORRER` | RT (ou RB) | Shift ou L |
+| Sem a bola: trocar de jogador | `PASSE` (vira `TROCAR`) | A ou LB | J ou C |
+| Sem a bola: bote | `CHUTE` (vira `BOTE`) | X ou B | K |
+| Pausar | ❚❚ | Menu (Start) | P ou Esc |
 
-Cada jogo pode ser **jogado** ou **simulado**. Nas opções dá para mudar dificuldade (Fácil, Normal, Difícil, Lendário), duração da partida (2 a 6 minutos), tamanho dos times (3×3, 4×4, 5×5) e simular o resto da temporada. Ao fim de cada temporada você pode continuar no clube ou **trocar de clube**.
+- **Passe semi-assistido:** a bola vai para o companheiro que está na direção apontada, já com a força certa e antecipando a corrida dele; a sua mira ainda puxa um pouco a direção. Sem ninguém na direção, o passe sai livre.
+- **Chute:** quanto mais tempo segurando, mais forte (e mais alto — força demais isola). Apontar para o gol escolhe o canto; a precisão depende do jogador, da pressão e da força.
+- Ao passar, o controle vai para quem recebe; sem mexer no analógico ele domina a bola sozinho.
+- O goleiro é automático. Há lateral, escanteio e tiro de meta. Mata-mata empatado: prorrogação com **gol de ouro** e depois **pênaltis**.
+- Nos menus, o controle também funciona: direcional navega, A confirma, B volta, LB/RB trocam de aba.
+
+Cada jogo pode ser **jogado** ou **simulado**. Nas opções: dificuldade (Fácil, Normal, Difícil, Lendário), duração (4 a 10 minutos), analógico fixo ou "onde tocar", troca automática de jogador e som. Ao fim de cada temporada você pode continuar ou **trocar de clube**.
+
+## Elenco
+
+A aba **Elenco** mostra os jogadores do clube, com nota geral e gols na temporada. Você escolhe a formação (4-3-3, 4-4-2, 4-2-3-1, 3-5-2, 5-3-2) e troca titulares e reservas. As notas vêm da força do clube e da posição; em campo elas viram velocidade, passe, finalização, desarme e, no goleiro, defesa.
+
+444 clubes têm o **elenco real** (lido da Wikipédia); os demais, na maioria clubes pequenos dos estaduais, recebem um elenco gerado.
 
 ## O que tem na carreira
 
@@ -31,31 +46,41 @@ Cada jogo pode ser **jogado** ou **simulado**. Nas opções dá para mudar dific
 | Sul-Americana | Fase nacional, 8 grupos, playoffs contra os terceiros da Libertadores, mata-mata, final única |
 | Recopa | Campeão da Libertadores × campeão da Sul-Americana |
 | Liga dos Campeões | Fase de liga com 36 clubes e 8 rodadas, playoffs e mata-mata |
-| Ligas europeias | Inglaterra, Espanha, Itália, Alemanha e França (simuladas rodada a rodada; também dá para treinar um clube delas) |
+| Ligas europeias | Inglaterra, Espanha, Itália, Alemanha e França (também dá para treinar um clube delas) |
 | Copa Intercontinental | Anual: Dérbi das Américas, Copa Challenger e final contra o campeão europeu |
 | Copa do Mundo de Clubes | 32 clubes, a cada 4 anos (2029, 2033…), com vagas pelos campeões continentais do ciclo |
 
-Vagas do Brasil na Libertadores (4 primeiros + campeão da Copa do Brasil na fase de grupos; 5º e vice da Copa do Brasil na preliminar), Sul-Americana (seis seguintes), acesso/descenso entre as séries e a entrada na Série D pelos estaduais são recalculados a cada virada de ano. A força dos clubes muda com o tempo (quem sobe se reforça, quem cai enfraquece, e o seu clube cresce com títulos e acessos).
+### Vagas que se acumulam
 
-A aba **Títulos** mostra a sala de troféus do clube (histórico real até 2025 + o que você conquistar), o ranking de maiores campeões de cada competição, os campeões de cada temporada e a carreira do treinador.
+As vagas do Brasil são recalculadas com a tabela e os campeões das copas (`brContinental` em `js/core/season.js`, testado em `tools/test-vagas.mjs`):
+
+- Libertadores, fase de grupos: 4 melhores do Brasileirão + campeão da Copa do Brasil. Preliminar: o seguinte da tabela + vice da Copa do Brasil. Sul-Americana: os 6 seguintes.
+- Os campeões da **Libertadores** e da **Sul-Americana** ganham vaga extra na fase de grupos. Se já estavam na zona de classificação, **a vaga deles desce para o próximo da tabela** — o G4 vira G5, G6…
+- O mesmo vale para o campeão e o vice da Copa do Brasil que já estejam classificados pelo Brasileirão.
+- Exemplo do teste: campeão da Libertadores em 1º, da Sul-Americana em 3º, da Copa do Brasil em 2º e vice em 4º → grupos até o 7º, preliminar com 8º e 9º, Sul-Americana do 10º ao 15º.
+
+A tabela da Série A mostra essas zonas ao vivo, e a força dos clubes muda com o tempo (quem sobe se reforça, quem cai enfraquece, e o seu clube cresce com títulos e acessos).
+
+A aba **Títulos** mostra a sala de troféus (histórico real até 2025 + o que você conquistar), o ranking de maiores campeões de cada competição, os campeões de cada temporada e a carreira do treinador. Em **Tabelas** há a **artilharia** de cada competição.
 
 ## Rodar
 
-Abra pelo celular qualquer endereço que sirva estes arquivos. Opções:
-
 - **GitHub Pages:** no repositório, *Settings → Pages → Deploy from a branch*, escolha o branch e a pasta `/ (root)`. O jogo fica em `https://<usuário>.github.io/Mundial-Hax/`. No celular, use "Adicionar à tela inicial" para abrir em tela cheia.
-- **No computador:** `node tools/serve.mjs` e abra `http://localhost:8080` (o jogo usa módulos ES, então precisa de um servidor; abrir o `index.html` direto do disco não funciona).
+- **No computador:** `node tools/serve.mjs` e abra `http://localhost:8080` (o jogo usa módulos ES, então precisa de um servidor; abrir o `index.html` direto do disco não funciona). Um controle USB/Bluetooth é reconhecido pelo navegador.
+- **Xbox Series S/X (modo desenvolvedor):** projeto UWP em [`xbox/`](xbox/README.md). Também dá para abrir o endereço do GitHub Pages no Edge do console.
 
-O progresso é salvo automaticamente no `localStorage` do navegador daquele aparelho.
+O progresso é salvo automaticamente no armazenamento do navegador/aplicativo daquele aparelho.
 
 ## Estrutura
 
 ```
 index.html, css/style.css      página e estilos
-js/data/                       base de clubes e títulos (gerada)
-js/core/                       motor da carreira: fases, competições, calendário, temporada, save
-js/game/                       partida: física, IA, controlador, tela/controles/pênaltis
-js/ui/app.js                   menus, tabelas, estatísticas
+js/data/                       clubes, títulos e elencos (gerados)
+js/core/                       carreira: fases, competições, calendário, temporada, elencos, save
+js/game/engine.js              partida 11x11: física, posse, passe/chute/bote, goleiros, bola parada, IA
+js/game/view.js                câmera, desenho, radar, toque/teclado/controle, pênaltis
+js/ui/                         menus, tabelas, estatísticas, navegação por controle
+xbox/                          projeto UWP (C# + WebView2) para o Xbox
 tools/                         servidor de desenvolvimento, testes e gerador de dados
 ```
 
@@ -63,25 +88,27 @@ Testes:
 
 ```
 npm test                                   # simula 6 temporadas completas e confere invariantes
-node tools/test-match.mjs                  # partidas IA × IA (equilíbrio)
-node tools/test-levels.mjs 150             # efeito do nível da IA
+node tools/test-vagas.mjs                  # acúmulo de vagas (G4 -> G5...)
+node tools/test-match.mjs 20               # partidas IA x IA: placares, passes, efeito de elenco e dificuldade
 node tools/serve.mjs 8123 &                # e, com o servidor no ar:
 node tools/e2e.cjs                         # carreira ponta a ponta no navegador (Playwright)
-node tools/e2e-match.cjs                   # toque, pausa, prorrogação
+node tools/e2e-match.cjs                   # toque, controle (gamepad simulado), pausa
 node tools/e2e-pens.cjs                    # disputa de pênaltis
 ```
 
 ## Dados e escudos
 
-- A lista de clubes (659), divisões de 2026, participantes dos estaduais e das copas continentais, cores e histórico de títulos foram montados a partir da **Wikipédia** e do **Wikidata** com os scripts de `tools/data/` (`step1` a `step4`). Para atualizar, rode-os em ordem e o `step4` regrava `js/data/`.
-- Os **escudos** não ficam no repositório: são carregados em tempo de execução do CDN de imagens do **Transfermarkt**, pelo id do clube (obtido no Wikidata), com imagem reserva da Wikipédia e, por último, um emblema gerado com as cores do clube. O Transfermarkt não oferece API pública e bloqueia leitura automática das páginas, por isso só as imagens são usadas. Se o CDN mudar ou sair do ar, o jogo continua funcionando com os emblemas gerados.
-- Nomes e escudos pertencem aos respectivos clubes; este é um projeto de fã, sem vínculo com clubes, federações, Transfermarkt ou qualquer outro jogo.
+- Clubes (659), divisões de 2026, participantes, cores, títulos e **elencos** foram montados a partir da **Wikipédia** e do **Wikidata** com os scripts de `tools/data/` (`step1` a `step6`). Para atualizar, rode-os em ordem; `step4` e `step6` regravam `js/data/`.
+- Os **escudos** não ficam no repositório: são carregados em tempo de execução do CDN de imagens do **Transfermarkt**, pelo id do clube (obtido no Wikidata), com imagem reserva da Wikipédia e, por último, um emblema gerado com as cores do clube. O Transfermarkt não oferece API pública e bloqueia leitura automática das páginas, por isso só as imagens são usadas.
+- Nomes de clubes e jogadores e os escudos pertencem aos respectivos donos; este é um projeto de fã, sem vínculo com clubes, federações, Transfermarkt ou qualquer outro jogo.
 
 ## Simplificações conhecidas
 
-- Não há elencos nem jogadores com nome: a força do clube define a qualidade da IA, do goleiro e dos companheiros.
+- **Sem impedimento, faltas, cartões nem substituições durante o jogo.** Os atacantes da IA respeitam a linha do último defensor, mas a regra não é apitada.
+- As notas dos jogadores não são reais: saem da força do clube com variação por jogador. Não há transferências, envelhecimento nem lesões; o elenco é o mesmo a cada temporada.
+- Artilharia: gols das partidas jogadas são dos jogadores que marcaram; nas simuladas são sorteados com peso por posição. Só as competições principais e as do seu clube são contabilizadas.
 - As ligas europeias e a Champions correm dentro do ano-calendário do jogo (a "temporada 2026" europeia equivale a 2026-27).
-- Estaduais usam um formato-padrão por número de clubes (liga + mata-mata), não o regulamento específico de cada federação; a segunda divisão estadual é representada só pela troca dos últimos colocados por clubes de divisão nacional que estejam fora.
-- Países sul-americanos fora do Brasil não têm liga simulada: as vagas saem de um ranking anual por força. Copa do Nordeste, Copa Verde e Copa Sul-Sudeste não estão no jogo.
-- O formato da Série C com 24/28 clubes (2027 em diante) é uma projeção, já que o regulamento ainda não foi publicado.
-- Em alguns estados a Wikipédia não tinha a página de 2026; nesses casos a lista de participantes vem da edição mais recente disponível, e a contagem de títulos de poucos estados (MS, TO, RO) está incompleta.
+- Estaduais usam um formato-padrão por número de clubes, não o regulamento de cada federação. Países sul-americanos fora do Brasil não têm liga simulada. Copa do Nordeste, Copa Verde e Copa Sul-Sudeste não estão no jogo.
+- O formato da Série C com 24/28 clubes (2027 em diante) é uma projeção.
+- Em alguns estados a Wikipédia não tinha a página de 2026; nesses casos a lista vem da edição mais recente disponível, e a contagem de títulos de poucos estados (MS, TO, RO) está incompleta.
+- O projeto do Xbox ainda não foi compilado nem testado em console (veja `xbox/README.md`).

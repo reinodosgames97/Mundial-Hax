@@ -1,11 +1,15 @@
 // Interface do Mundial Hax (menus, carreira, tabelas e estatísticas).
 import { clubs, club, cname, crestUrl, crestFallback, abbr, INIT, UF_NAMES, STATE_NAMES } from "../core/db.js";
-import { newGame, step, playUser, simUser, endSeason, save, load, wipe, compsOf, fixtures, standing, titlesOf, titleRanking, divOf, DIFFS, stageHas, changeClub } from "../core/season.js";
+import { newGame, step, playUser, simUser, endSeason, save, load, wipe, compsOf, fixtures, standing, titlesOf, titleRanking, divOf, DIFFS, stageHas, changeClub, lineupOf, setFormation, topScorers, playerGoals, brContinental } from "../core/season.js";
+import { squadOf, ovrOf, matchTeam, defaultFormation, bestXI, FORMATIONS, FORM_NAMES } from "../core/squads.js";
+import { initPad, padAfterRender } from "./pad.js";
 import { ORDER, COMP_NAMES, R, slotLabel, EU_LEAGUES, UFS } from "../core/comps.js";
 import { table, stageMatches, played, score, aggregate } from "../core/stages.js";
 import { runMatch } from "../game/view.js";
 
 const app = document.getElementById("app");
+// modo TV (Xbox): margem de segurança e letras maiores. Ativado com ?tv=1 na URL.
+if (/[?&]tv=1/.test(location.search)) document.documentElement.classList.add("tv");
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 window.__crestErr = img => { const fb = img.dataset.fb; if (fb) { img.dataset.fb = ""; img.src = fb; } else img.remove(); };
 window.__crestOk = img => img.parentNode.classList.add("ok");
@@ -20,7 +24,7 @@ export function crest(id, size) {
 }
 
 let G = null, ev = null;
-const ui = { screen: "title", tab: "home", comp: null, stage: null, stat: "club", rankKey: "BRA", pickTab: "A", pickUF: "SP", pickLg: "ENG", pick: null, post: null, summary: null, changing: false };
+const ui = { screen: "title", tab: "home", comp: null, stage: null, stat: "club", rankKey: "BRA", pickTab: "A", pickUF: "SP", pickLg: "ENG", pick: null, post: null, summary: null, changing: false, selP: null };
 const DIV_LABEL = { A: "Série A", B: "Série B", C: "Série C", D: "Série D", "": "Sem divisão nacional" };
 const rating = id => Math.round(G ? R(G, id) : club(id).r0);
 
@@ -45,10 +49,11 @@ function render() {
   const body = app.querySelector(".body");
   if (body && ui.keepScroll) body.scrollTop = ui.keepScroll;
   ui.keepScroll = 0;
+  padAfterRender();
 }
 const page = (title, sub, body, { back, nav } = {}) => `
   <div class="screen">
-    <div class="top">${back ? `<button class="back" data-act="${back}" aria-label="Voltar">‹</button>` : ""}<h1>${title}${sub ? `<div class="sub">${sub}</div>` : ""}</h1></div>
+    <div class="top">${back ? `<button class="back" data-act="${back}" aria-label="Voltar">‹</button>` : ""}<h1>${title}${sub ? `<div class="sub">${sub}</div>` : ""}</h1>${nav ? `<button class="gear ${ui.tab === "opts" ? "on" : ""}" data-act="tab" data-v="opts" aria-label="Opções">⚙️</button>` : ""}</div>
     <div class="body"><div class="wrap">${body}</div></div>
     ${nav ? vNav() : ""}
   </div>`;
@@ -69,9 +74,9 @@ function vTitle() {
 function vHelp() {
   return page("Como jogar", "", `
     <div class="card"><h3>Partida</h3>
-      <p>Arraste o dedo no lado esquerdo da tela para mover o jogador. Segure <b>CHUTE</b> para chutar quando encostar na bola. <b>TROCAR</b> passa o controle para o companheiro mais próximo da bola (o goleiro é automático).</p>
-      <p>Não há lateral nem escanteio: a bola bate nas paredes e o jogo não para. Em mata-mata empatado há prorrogação com gol de ouro e, se preciso, pênaltis.</p>
-      <p class="hint">Funciona em pé ou deitado; com o celular deitado o campo fica maior. No computador: setas/WASD, espaço para chutar, C para trocar.</p></div>
+      <p>Futebol 11 contra 11 visto de cima, com o elenco do clube. Use o analógico para mover. <b>PASSE</b>: toque rápido manda a bola rasteira para o companheiro na direção apontada (semi-assistido); segurando sai um passe alto. <b>CHUTE</b>: segure para dar força e aponte para escolher o canto. <b>CORRER</b> gasta fôlego.</p>
+      <p>Sem a bola, PASSE troca para o jogador mais perto dela e CHUTE dá o bote. O goleiro é automático. Há lateral, escanteio e tiro de meta; não há impedimento nem faltas. Mata-mata empatado vai para prorrogação com gol de ouro e pênaltis.</p>
+      <p class="hint">Funciona com toque, teclado ou controle (Xbox, PlayStation etc.). Com o celular deitado o campo aparece maior.</p></div>
     <div class="card"><h3>Carreira</h3>
       <p>Você disputa tudo o que o clube disputaria: estadual, Brasileirão (Séries A a D), Copa do Brasil, Libertadores, Sul-Americana, Recopa, Supercopa, Intercontinental e a Copa do Mundo de Clubes (a cada quatro anos, a partir de 2029).</p>
       <p>Acesso, rebaixamento e vagas seguem os regulamentos de 2026. Cada jogo pode ser jogado ou simulado. No fim da temporada você pode continuar ou trocar de clube; títulos e estatísticas ficam salvos no aparelho.</p></div>`, { back: "title" });
@@ -108,13 +113,13 @@ function vPick() {
 
 /* ---------------------------- hub ---------------------------- */
 function vNav() {
-  const tabs = [["home", "🏠", "Início"], ["tables", "📊", "Tabelas"], ["games", "📅", "Jogos"], ["stats", "🏆", "Títulos"], ["opts", "⚙️", "Opções"]];
+  const tabs = [["home", "🏠", "Início"], ["squad", "👥", "Elenco"], ["tables", "📊", "Tabelas"], ["games", "📅", "Jogos"], ["stats", "🏆", "Títulos"]];
   return `<nav class="nav">${tabs.map(([k, i, n]) => `<button class="${ui.tab === k ? "on" : ""}" data-act="tab" data-v="${k}"><span>${i}</span>${n}</button>`).join("")}</nav>`;
 }
 function vHub() {
   const me = G.userClub;
   const sub = `Temporada ${G.season} · ${DIV_LABEL[divOf(G, me)] ?? ""}`;
-  const body = ui.tab === "home" ? tHome() : ui.tab === "tables" ? tTables() : ui.tab === "games" ? tGames() : ui.tab === "stats" ? tStats() : tOpts();
+  const body = ui.tab === "home" ? tHome() : ui.tab === "squad" ? tSquad() : ui.tab === "tables" ? tTables() : ui.tab === "games" ? tGames() : ui.tab === "stats" ? tStats() : tOpts();
   return page(`${crest(me, 26)} ${esc(cname(me))}`, sub, body, { nav: true });
 }
 const sideCard = (id, where) => `<div class="side">${crest(id)}<span>${esc(cname(id))}</span><small>${where ? where + " · " : ""}Força ${rating(id)}</small></div>`;
@@ -145,13 +150,30 @@ function tHome() {
     <div class="card"><h3>Competições</h3><ul class="list">${sit || '<li class="muted">Sem competições nesta temporada.</li>'}</ul></div>`;
 }
 
+/* ---------------------------- elenco ---------------------------- */
+const POS_NAME = { G: "GOL", D: "DEF", M: "MEI", A: "ATA" };
+function tSquad() {
+  const me = G.userClub, sq = squadOf(me), lu = lineupOf(G, me), r = R(G, me), slots = FORMATIONS[lu.form];
+  const row = (p, slot, k) => {
+    const out = slot && p.pos !== slot;
+    return `<button class="prow ${ui.selP === p.i ? "sel" : ""}" data-act="selp" data-v="${p.i}"><span class="pos p${slot || p.pos}">${POS_NAME[slot || p.pos]}</span><span class="pn">${p.num}</span><span class="grow">${esc(p.name)}${out ? ` <small class="muted">(${POS_NAME[p.pos]})</small>` : ""}</span>${playerGoals(G, me, p.i) ? `<span class="muted">⚽ ${playerGoals(G, me, p.i)}</span>` : ""}<b class="ovr">${ovrOf(p, r - (out ? 5 : 0))}</b></button>`;
+  };
+  const xi = lu.xi.map((i, k) => row(sq[i], slots[k][0], k)).join("");
+  const bench = sq.filter(p => !lu.xi.includes(p.i)).sort((x, y) => "GDMA".indexOf(x.pos) - "GDMA".indexOf(y.pos) || y.off - x.off).map(p => row(p)).join("");
+  return `<div class="card"><h3>Formação</h3><div class="seg">${FORM_NAMES.map(f => `<button data-act="form" data-v="${f}" class="${lu.form === f ? "on" : ""}">${f}</button>`).join("")}</div>
+      <p class="hint">Toque em um jogador e depois em outro para trocar os dois de lugar.</p>
+      <button class="btn small" style="margin-top:8px" data-act="bestxi">Melhor escalação</button></div>
+    <div class="card"><h3>Titulares · força ${rating(me)}</h3>${xi}</div>
+    <div class="card"><h3>Reservas</h3>${bench || '<p class="muted">Sem reservas.</p>'}</div>`;
+}
+
 /* ---------------------------- tabelas ---------------------------- */
 const ZONE_LABEL = { lib: ["var(--accent)", "Libertadores"], pre: ["#29b6f6", "Pré-Libertadores"], sul: ["var(--warn)", "Sul-Americana"], up: ["var(--accent)", "Acesso"], po: ["#29b6f6", "Playoff"], down: ["var(--bad)", "Rebaixamento"], q: ["var(--accent)", "Classificação"] };
-function tableHTML(g, zones = []) {
+function tableHTML(g, zones = [], zmap = null) {
   const me = G.userClub, rows = table(g, t => R(G, t));
-  const zc = i => { const z = zones.find(([a, b]) => i >= a && i <= b); return z ? "z-" + z[2] : ""; };
+  const zc = (i, t) => { if (zmap) return zmap[t] ? "z-" + zmap[t] : ""; const z = zones.find(([a, b]) => i >= a && i <= b); return z ? "z-" + z[2] : ""; };
   return `<table class="tb"><thead><tr><th></th><th style="text-align:left">Clube</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>SG</th></tr></thead><tbody>${rows.map((r, i) =>
-    `<tr class="${zc(i + 1)} ${r.t === me ? "me" : ""}"><td class="p">${i + 1}</td><td class="n">${crest(r.t)}${esc(cname(r.t))}</td><td class="pts">${r.pts}</td><td>${r.j}</td><td>${r.v}</td><td>${r.e}</td><td>${r.d}</td><td>${r.gp - r.gc > 0 ? "+" : ""}${r.gp - r.gc}</td></tr>`).join("")}</tbody></table>`;
+    `<tr class="${zc(i + 1, r.t)} ${r.t === me ? "me" : ""}"><td class="p">${i + 1}</td><td class="n">${crest(r.t)}${esc(cname(r.t))}</td><td class="pts">${r.pts}</td><td>${r.j}</td><td>${r.v}</td><td>${r.e}</td><td>${r.d}</td><td>${r.gp - r.gc > 0 ? "+" : ""}${r.gp - r.gc}</td></tr>`).join("")}</tbody></table>`;
 }
 const legend = zones => { const seen = [...new Set(zones.map(z => z[2]))]; return seen.length ? `<div class="legend">${seen.map(k => `<span><i style="background:${ZONE_LABEL[k][0]}"></i>${ZONE_LABEL[k][1]}</span>`).join("")}</div>` : ""; };
 function tieHTML(st, t) {
@@ -163,8 +185,18 @@ function tieHTML(st, t) {
     <div class="sc">${any ? A + " – " + B : "×"}${legs}${pens}</div>
     <div class="t">${crest(t.b, 22)}<span class="n ${done && t.w === t.b ? "w" : ""}">${esc(cname(t.b))}</span></div></div>`;
 }
-function stageHTML(st) {
+function stageHTML(st, c) {
   const me = G.userClub;
+  if (st.type === "league" && c && c.id === "BRA") {
+    // vagas calculadas ao vivo: campeões continentais e da Copa do Brasil abrem vaga para o próximo da tabela
+    const v = brContinental(G), zm = {}, o = table(st, t => R(G, t)).map(r => r.t);
+    for (const id of [...v.g, ...v.champs]) zm[id] = "lib";
+    for (const id of v.p) zm[id] = "pre";
+    for (const id of v.s) zm[id] = "sul";
+    for (const id of o.slice(-4)) zm[id] = "down";
+    const nG = v.g.filter(id => o.includes(id) && id !== G.comps.CDB?.champion).length;
+    return tableHTML(st, st.zones, zm) + legend(st.zones) + `<p class="hint">As vagas se acumulam: quando um campeão da Libertadores, da Sul-Americana ou da Copa do Brasil já está na zona de classificação, a vaga passa para o próximo da tabela. Neste momento a Série A leva ${v.g.filter(id => o.includes(id)).length + v.champs.filter(id => o.includes(id)).length} clubes à fase de grupos da Libertadores, ${v.p.filter(id => o.includes(id)).length} à preliminar e ${v.s.length} à Sul-Americana.</p>`;
+  }
   if (st.type === "league") return tableHTML(st, st.zones) + legend(st.zones);
   if (st.type === "groups") {
     const gs = st.groups.slice().sort((a, b) => b.teams.includes(me) - a.teams.includes(me));
@@ -181,14 +213,16 @@ function tTables() {
   const all = ORDER.map(id => G.comps[id]).filter(Boolean);
   if (!ui.comp || !G.comps[ui.comp]) ui.comp = (mine.find(c => c.tier) || mine[0] || all[0]).id;
   const c = G.comps[ui.comp];
-  if (ui.stage == null || ui.stage >= c.stages.length) ui.stage = Math.max(0, c.stages.length - 1);
+  const top = topScorers(G, c.id, 20);
+  if (ui.stage !== "top" && (ui.stage == null || ui.stage >= c.stages.length)) ui.stage = Math.max(0, c.stages.length - 1);
+  if (ui.stage === "top" && !top.length) ui.stage = Math.max(0, c.stages.length - 1);
   const others = all.filter(x => !mine.includes(x));
   const st = c.stages[ui.stage];
   return `<div class="chips">${mine.map(x => `<button class="chip ${x.id === c.id ? "on" : ""}" data-act="comp" data-v="${x.id}">${esc(x.short)}</button>`).join("")}</div>
     <label class="field"><select data-ch="comp"><option value="">Outras competições…</option>${others.map(x => `<option value="${x.id}" ${x.id === c.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
     <div class="card"><h3>${esc(c.name)} ${G.season}${c.done && c.champion != null ? ` · Campeão: ${esc(cname(c.champion))}` : ""}</h3>
-      ${c.stages.length > 1 ? `<div class="chips">${c.stages.map((s, i) => `<button class="chip ${i === ui.stage ? "on" : ""}" data-act="stage" data-v="${i}">${esc(s.name)}</button>`).join("")}</div>` : ""}
-      ${st ? stageHTML(st) : `<p class="muted">Aguardando a definição dos participantes.</p>`}
+      ${c.stages.length > 1 || top.length ? `<div class="chips">${c.stages.map((s, i) => `<button class="chip ${i === ui.stage ? "on" : ""}" data-act="stage" data-v="${i}">${esc(s.name)}</button>`).join("")}${top.length ? `<button class="chip ${ui.stage === "top" ? "on" : ""}" data-act="stage" data-v="top">Artilharia</button>` : ""}</div>` : ""}
+      ${ui.stage === "top" ? `<ul class="list">${top.map((t, i) => `<li class="${t.club === me ? "mine" : ""}"><span class="muted" style="width:22px">${i + 1}</span>${crest(t.club, 22)}<span class="grow">${esc(t.name)} <small class="muted">${esc(cname(t.club))}</small></span><b>${t.goals}</b></li>`).join("")}</ul>` : st ? stageHTML(st, c) : `<p class="muted">Aguardando a definição dos participantes.</p>`}
     </div>`;
 }
 
@@ -239,14 +273,19 @@ function tOpts() {
   const o = G.opts, seg = (act, vals, cur, fmt = v => v) => `<div class="seg">${vals.map(v => `<button data-act="${act}" data-v="${v}" class="${cur === v ? "on" : ""}">${fmt(v)}</button>`).join("")}</div>`;
   return `<div class="card"><h3>Partida</h3>
       <label class="field"><span>Dificuldade</span>${seg("diff", [0, 1, 2, 3], G.diff, v => DIFFS[v])}</label>
-      <label class="field"><span>Duração do jogo</span>${seg("mins", [2, 3, 4, 6], o.mins, v => v + " min")}</label>
-      <label class="field"><span>Jogadores por time</span>${seg("size", [3, 4, 5], o.size, v => v + " × " + v)}</label>
+      <label class="field"><span>Duração do jogo</span>${seg("mins", [4, 6, 8, 10], o.mins, v => v + " min")}</label>
+      <label class="field"><span>Analógico na tela</span>${seg("stick", ["fixed", "float"], o.stick || "fixed", v => (v === "fixed" ? "Fixo" : "Onde tocar"))}</label>
       <label class="field"><span>Troca automática de jogador</span>${seg("auto", [1, 0], o.autoSwitch ? 1 : 0, v => (v ? "Ligada" : "Desligada"))}</label>
       <label class="field" style="margin:0"><span>Som</span>${seg("sound", [1, 0], o.sound ? 1 : 0, v => (v ? "Ligado" : "Desligado"))}</label>
     </div>
     <div class="card"><h3>Temporada</h3>
       <button class="btn" data-act="simall" ${ev?.type === "match" ? "" : "disabled"}>Simular o resto da temporada</button>
       <p class="hint">Trocar de clube é possível ao fim de cada temporada.</p>
+    </div>
+    <div class="card"><h3>Controles</h3>
+      <p class="hint" style="margin-top:0"><b>Toque:</b> analógico à esquerda; PASSE (toque rápido = rasteiro para o companheiro na direção do analógico, segurando = passe alto), CHUTE (segure para dar força; o analógico escolhe o canto), CORRER. Sem a bola, PASSE troca de jogador e CHUTE dá o bote.</p>
+      <p class="hint"><b>Controle (Xbox e outros):</b> analógico esquerdo move · A passe/trocar · X ou B chute/bote · RT correr · LB trocar · Start pausa. Nos menus: direcional navega, A confirma, B volta, LB/RB mudam de aba.</p>
+      <p class="hint"><b>Teclado:</b> setas ou WASD · J/Z passe · K/X chute · Shift/L correr · C trocar · P pausa.</p>
     </div>
     <div class="card"><h3>Dados</h3>
       <button class="btn" data-act="title">Voltar ao menu</button>
@@ -257,7 +296,8 @@ function tOpts() {
 
 /* ---------------------------- pós-jogo ---------------------------- */
 function vPost() {
-  const { d, hg, ag, pen } = ui.post, me = G.userClub;
+  const { d, hg, ag, pen, goals } = ui.post, me = G.userClub;
+  const gl = goals && goals.length ? `<div class="goals">${goals.map(g => `<div class="${g.club === d.h ? "gh" : "ga"}">${g.club === d.h ? "" : `<i>${g.min}'</i> `}${esc(g.name)}${g.own ? " (contra)" : ""}${g.club === d.h ? ` <i>${g.min}'</i>` : ""}</div>`).join("")}</div>` : "";
   const mine = d.h === me ? hg : ag, th = d.h === me ? ag : hg;
   let v = mine > th ? "V" : mine < th ? "D" : "E", text = { V: "Vitória!", E: "Empate", D: "Derrota" }[v];
   if (pen) { const pm = d.h === me ? pen[0] : pen[1], pt = d.h === me ? pen[1] : pen[0]; v = pm > pt ? "V" : "D"; text = pm > pt ? "Classificado nos pênaltis!" : "Eliminado nos pênaltis"; }
@@ -269,7 +309,7 @@ function vPost() {
   else if (st.type === "groups") { const g = st.groups.find(g2 => g2.teams.includes(me)); if (g) tb = `<div class="gtitle">Grupo ${esc(g.name)}</div>` + tableHTML(g, st.zones); }
   return page(esc(d.comp), `${esc(d.stage)}${d.label ? " · " + esc(d.label) : ""}`, `
     <div class="card result"><div class="vs next"><div class="vs">${sideCard(d.h, "")}<div><div class="big">${hg} – ${ag}</div>${pen ? `<div class="pens">Pênaltis: ${pen[0]} – ${pen[1]}</div>` : ""}</div>${sideCard(d.a, "")}</div></div>
-      <div class="verdict ${v}">${text}</div>
+      ${gl}<div class="verdict ${v}">${text}</div>
       <button class="btn primary" style="margin-top:14px" data-act="postok">Continuar</button></div>
     ${round.length ? `<div class="card"><h3>Outros resultados</h3>${round.slice(0, 24).map(x => fxRow(x, false)).join("")}</div>` : ""}
     ${tb ? `<div class="card"><h3>Classificação</h3>${tb}</div>` : ""}
@@ -306,24 +346,26 @@ async function doMatch(simulate) {
   if (busy || ev?.type !== "match") return;
   busy = true;
   const d = ev.match, me = G.userClub, home = d.h === me, opp = home ? d.a : d.h;
-  let hg, ag, pen = null;
+  let hg, ag, pen = null, goals = null;
   try {
     if (simulate) { const r = simUser(G, d); hg = r.hg; ag = r.ag; pen = r.pen; }
     else {
-      const hb = d.neutral ? 0 : 1.5;
+      const hb = d.neutral ? 0 : 1.5, lu = lineupOf(G, me);
       const r = await runMatch(document.body, {
-        size: G.opts.size, mins: G.opts.mins, diff: G.diff, autoSwitch: G.opts.autoSwitch, sound: G.opts.sound,
-        ratings: [R(G, me) + (home ? hb : -hb), R(G, opp) + (home ? -hb : hb)], human: 0,
+        teams: [matchTeam(me, R(G, me) + (home ? hb : -hb), lu.form, lu.xi), matchTeam(opp, R(G, opp) + (home ? -hb : hb), defaultFormation(opp))],
+        mins: G.opts.mins, diff: G.diff, autoSwitch: G.opts.autoSwitch, sound: G.opts.sound, stick: G.opts.stick, human: 0,
         needWinner: d.ko && d.decisive, aggDiff: d.agg ? (home ? d.agg.h - d.agg.a : d.agg.a - d.agg.h) : 0, kickoff: home ? 0 : 1,
         left: sideInfo(me), right: sideInfo(opp), title: d.short + " · " + d.stage, sub: d.label,
       });
       hg = home ? r.score[0] : r.score[1]; ag = home ? r.score[1] : r.score[0];
       pen = r.pens ? (home ? r.pens : [r.pens[1], r.pens[0]]) : null;
-      pen = playUser(G, d, { hg, ag, pen }).pen;
+      goals = r.goals.map(g => ({ club: g.team === 0 ? me : opp, name: g.name, i: g.i, own: g.own, min: g.min }));
+      const scorers = goals.filter(g => !g.own && g.i >= 0).map(g => [g.club, g.i]);
+      pen = playUser(G, d, { hg, ag, pen, scorers }).pen;
     }
   } finally { busy = false; }
   persist();
-  ui.post = { d, hg, ag, pen }; ui.screen = "post"; render();
+  ui.post = { d, hg, ag, pen, goals }; ui.screen = "post"; render();
 }
 
 /* ---------------------------- eventos ---------------------------- */
@@ -339,7 +381,7 @@ const ACT = {
   start() { saveCoach(); G = newGame({ clubId: ui.pick, coach: ui.coach || "Treinador", diff: ui.diff ?? 1 }); refreshEvent(); ui.screen = "hub"; ui.tab = "home"; ui.comp = null; ui.summary = null; render(); },
   tab(v) { ui.tab = v; render(); },
   comp(v) { ui.comp = v; ui.stage = null; render(); },
-  stage(v) { ui.stage = +v; ui.keepScroll = app.querySelector(".body").scrollTop; render(); },
+  stage(v) { ui.stage = v === "top" ? "top" : +v; ui.keepScroll = app.querySelector(".body").scrollTop; render(); },
   stat(v) { ui.stat = v; render(); },
   play() { doMatch(false); },
   sim() { doMatch(true); },
@@ -356,7 +398,21 @@ const ACT = {
   confirmchange() { changeClub(G, ui.pick); ui.changing = false; ui.summary = null; ui.comp = null; refreshEvent(); ui.screen = "hub"; ui.tab = "home"; render(); toast("Bem-vindo ao " + cname(G.userClub) + "!"); },
   diff(v) { G.diff = +v; persist(); render(); },
   mins(v) { G.opts.mins = +v; persist(); render(); },
-  size(v) { G.opts.size = +v; persist(); render(); },
+  stick(v) { G.opts.stick = v; persist(); render(); },
+  form(v) { setFormation(G, v); ui.selP = null; persist(); render(); },
+  bestxi() { setFormation(G, lineupOf(G, G.userClub).form); ui.selP = null; persist(); render(); },
+  selp(v) {
+    const i = +v, lu = lineupOf(G, G.userClub);
+    if (ui.selP === null) ui.selP = i;
+    else if (ui.selP === i) ui.selP = null;
+    else {
+      const a = lu.xi.indexOf(ui.selP), b = lu.xi.indexOf(i);
+      if (a >= 0 && b >= 0) [lu.xi[a], lu.xi[b]] = [lu.xi[b], lu.xi[a]];
+      else if (a >= 0) lu.xi[a] = i; else if (b >= 0) lu.xi[b] = ui.selP;
+      ui.selP = null; persist();
+    }
+    ui.keepScroll = app.querySelector(".body").scrollTop; render();
+  },
   auto(v) { G.opts.autoSwitch = v === "1"; persist(); render(); },
   sound(v) { G.opts.sound = v === "1"; persist(); render(); },
   async wipe() { if (!(await ask("Apagar a carreira salva? Isso não pode ser desfeito.", "Apagar"))) return; wipe(); G = null; ev = null; ui.summary = null; ui.screen = "title"; render(); },
@@ -375,6 +431,7 @@ app.addEventListener("change", e => {
   render();
 });
 // o resumo de fim de temporada precisa sobreviver a um recarregamento: nesse caso a nova temporada já está montada
+initPad({ back() { const b = document.querySelector(".modal [data-r='0']") || app.querySelector(".back"); if (b) b.click(); else if (ui.screen === "hub" && ui.tab !== "home") ACT.tab("home"); }, tab(dir) { if (ui.screen !== "hub") return; const t = ["home", "squad", "tables", "games", "stats", "opts"], i = t.indexOf(ui.tab); ACT.tab(t[(i + dir + t.length) % t.length]); } });
 render();
 // ganchos para testes automatizados
 window.__mh = { get G() { return G; }, get ev() { return ev; }, ui, ACT, render };

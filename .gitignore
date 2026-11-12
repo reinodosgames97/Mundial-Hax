@@ -4,3 +4,9 @@ tools/data/*.json
 tools/data/*.log
 shots/
 .DS_Store
+xbox/**/bin/
+xbox/**/obj/
+xbox/.vs/
+xbox/**/AppPackages/
+xbox/**/BundleArtifacts/
+*.user

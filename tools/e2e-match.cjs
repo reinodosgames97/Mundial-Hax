@@ -1,66 +1,161 @@
-// Testa a partida no navegador: toque (joystick/chute), prorrogação e pênaltis.
+// Testa a partida 11x11 no navegador: toque (analógico fixo, passe, chute), controle (gamepad simulado) e pausa.
 // node tools/e2e-match.cjs [url] [pasta-de-capturas]
 const { chromium } = require("playwright");
 const URL = process.argv[2] || "http://localhost:8123/", SH = (process.argv[3] || "shots") + "/";
 require("fs").mkdirSync(SH, { recursive: true });
+
 const start = (page, extra) => page.evaluate(async extra => {
   const { runMatch } = await import("./js/game/view.js");
-  const side = (n, c1, c2) => ({ name: n, abbr: n.slice(0, 3).toUpperCase(), c1, c2, crest: "" });
+  const { matchTeam, defaultFormation } = await import("./js/core/squads.js");
+  const { findClub, club, abbr } = await import("./js/core/db.js");
+  const mk = n => { const id = findClub(n, "BR"); return { team: matchTeam(id, club(id).r0, defaultFormation(id)), info: { name: n, abbr: abbr(id), c1: club(id).c1, c2: club(id).c2, crest: "" } }; };
+  const a = mk("Flamengo"), b = mk("Corinthians");
   window.__res = null;
-  runMatch(document.body, { size: 4, mins: 3, diff: 1, ratings: [75, 75], human: 0, sound: false, left: side("Azul", "#1e56c8", "#ffffff"), right: side("Rubro", "#c81e2c", "#000000"), title: "Teste", ...extra }).then(r => (window.__res = r));
+  runMatch(document.body, { teams: [a.team, b.team], left: a.info, right: b.info, human: 0, diff: 1, mins: 6, sound: false, title: "Teste", ...extra }).then(r => (window.__res = r));
 }, extra);
+const state = page => page.evaluate(() => {
+  const m = document.querySelector(".mv")._match, c = m.ctrl, b = m.ball;
+  return { state: m.state, setPiece: !!m.setPiece, ctrl: c && c.name, x: c && +c.x.toFixed(2), y: c && +c.y.toFixed(2), owner: b.owner && b.owner.name, ownerTeam: b.owner ? b.owner.team : -1, target: b.target && b.target.name, passes: m.stats.passes[0], shots: m.stats.shots[0], bspeed: +Math.hypot(b.vx, b.vy).toFixed(1) };
+});
+
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
-  const page = await ctx.newPage();
+  let fails = 0;
+  const check = (ok, what) => { console.log((ok ? "OK    " : "FALHA ") + what); if (!ok) fails++; };
+
+  /* ---------- 1) toque, celular deitado ---------- */
+  let ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  let page = await ctx.newPage();
   const errs = [];
   page.on("pageerror", e => errs.push(e.message));
   await page.goto(URL);
   const cdp = await ctx.newCDPSession(page);
   const touch = (type, pts) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: pts.map(([x, y, id]) => ({ x, y, id })) });
-
-  // 1) joystick para cima (retrato = atacar) + chute segurado
   await start(page, {});
-  await page.waitForTimeout(1800);
-  const before = await page.evaluate(() => { const m = document.querySelector(".mv")._match; return { x: m.ctrl.x, y: m.ctrl.y }; });
-  await touch("touchStart", [[90, 760, 1]]);
-  await touch("touchMove", [[90, 700, 1]]);
-  await touch("touchStart", [[90, 700, 1], [330, 770, 2]]);
-  await page.waitForTimeout(900);
-  const mid = await page.evaluate(() => { const m = document.querySelector(".mv")._match; return { x: m.ctrl.x, y: m.ctrl.y, kick: m.ctrl.kick, ix: m.ctrl.ix, iy: m.ctrl.iy, ball: Math.hypot(m.w.ball.vx, m.w.ball.vy), touched: m.w.touched }; });
-  await page.screenshot({ path: SH + "20-toque.png" });
-  await touch("touchEnd", []);
-  console.log("toque: antes", JSON.stringify(before), "depois", JSON.stringify(mid));
-  const okMove = mid.x > before.x + 5 && mid.ix > 0.5 && mid.kick === true;
-  console.log(okMove ? "OK: joystick moveu o jogador para o ataque e o chute foi acionado" : "FALHA no controle por toque");
-  // trocar jogador
-  const c1 = await page.evaluate(() => document.querySelector(".mv")._match.ctrl.num);
-  await page.tap("#mvswitch");
-  const c2 = await page.evaluate(() => document.querySelector(".mv")._match.ctrl.num);
-  console.log("troca de jogador:", c1, "->", c2, c1 !== c2 ? "OK" : "FALHA");
-  // pausa
-  await page.tap(".mv-pause"); await page.waitForTimeout(200);
-  const paused = await page.evaluate(() => !document.querySelector("#mvmenu").classList.contains("hidden"));
-  console.log("pausa:", paused ? "OK" : "FALHA");
-  await page.screenshot({ path: SH + "21-pausa.png" });
+  await page.waitForFunction(() => document.querySelector(".mv")._match.setPiece, null, { timeout: 8000 });
+  await page.screenshot({ path: SH + "20-saida.png" });
+  let s0 = await state(page);
+  check(s0.owner === s0.ctrl && s0.ownerTeam === 0, "saída de bola com o jogador controlado (" + s0.ctrl + ")");
+  // a base do analógico é fixa: tocar longe do centro já dá direção total
+  const ring = await page.evaluate(() => { const r = document.querySelector("#mvring").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  // passe: aponta para trás (esquerda) e toca em PASSE
+  const pb = await page.evaluate(() => { const r = document.querySelector("#mvpass").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  await touch("touchStart", [[ring[0] - 40, ring[1], 1]]);
+  await page.waitForTimeout(120);
+  await touch("touchStart", [[ring[0] - 40, ring[1], 1], [pb[0], pb[1], 2]]);
+  await page.waitForTimeout(80);
+  await touch("touchEnd", [[pb[0], pb[1], 2]]);            // solta só o botão PASSE (os pontos listados são os liberados)
+  await page.waitForTimeout(250);
+  let s1 = await state(page);
+  check(s1.passes === 1 && s1.ctrl !== s0.ctrl, `passe semi-assistido: ${s0.ctrl} -> ${s1.target || s1.ctrl} (controle mudou para o destinatário)`);
+  await touch("touchEnd", [[ring[0] - 40, ring[1], 1]]);   // solta o analógico
+  // espera o destinatário dominar (sem tocar no analógico ele vai sozinho na bola)
+  await page.waitForFunction(() => { const m = document.querySelector(".mv")._match; return m.ball.owner && m.ball.owner === m.ctrl; }, null, { timeout: 6000 }).catch(() => {});
+  let s2 = await state(page);
+  check(s2.owner === s2.ctrl, "destinatário domina a bola sozinho (" + s2.ctrl + ")");
+  // analógico fixo: segura para a direita e confere deslocamento; o anel não sai do lugar
+  await touch("touchStart", [[ring[0] + 50, ring[1], 1]]);
+  await page.waitForTimeout(700);
+  const ring2 = await page.evaluate(() => { const r = document.querySelector("#mvring").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  let s3 = await state(page);
+  check(s3.x > s2.x + 2, `analógico move o jogador (${s2.x} -> ${s3.x})`);
+  check(Math.abs(ring2[0] - ring[0]) < 1 && Math.abs(ring2[1] - ring[1]) < 1, "base do analógico fica fixa");
+  await page.screenshot({ path: SH + "21-toque-paisagem.png" });
+  // chute carregado
+  const kb = await page.evaluate(() => { const r = document.querySelector("#mvkick").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  const hadBall = (await state(page)).owner === (await state(page)).ctrl;
+  await touch("touchStart", [[ring[0] + 50, ring[1], 1], [kb[0], kb[1], 3]]);
+  await page.waitForTimeout(350);
+  await touch("touchEnd", [[kb[0], kb[1], 3]]);
+  await page.waitForTimeout(120);
+  let s4 = await state(page);
+  if (hadBall) check(s4.shots >= 1 || s4.bspeed > 12, "chute carregado saiu (velocidade da bola " + s4.bspeed + ")");
+  await touch("touchEnd", [[ring[0] + 50, ring[1], 1]]);
+  // pausa e simular o resto
+  await page.tap(".mv-pause");
+  await page.waitForTimeout(200);
+  check(await page.evaluate(() => !document.querySelector("#mvmenu").classList.contains("hidden")), "pausa");
   await page.tap('[data-act="skip"]');
-  await page.waitForFunction(() => window.__res || document.querySelector(".pk"), null, { timeout: 20000 });
-  console.log("resultado após simular o resto:", JSON.stringify(await page.evaluate(() => window.__res)));
-
-  // 2) mata-mata empatado -> prorrogação -> pênaltis
-  await page.reload();
-  await start(page, { needWinner: true, mins: 0.1, speed: 6, levels: [0.05, 0.05] });
-  await page.waitForFunction(() => document.querySelector(".pk") || window.__res, null, { timeout: 60000 });
-  const hasPk = await page.evaluate(() => !!document.querySelector(".pk"));
-  console.log("pênaltis abertos:", hasPk);
-  if (hasPk) {
-    await page.waitForTimeout(700);
-    await page.screenshot({ path: SH + "22-penaltis.png" });
-    for (let i = 0; i < 40 && !(await page.evaluate(() => window.__res)); i++) { await page.tap(`.pk-zone[data-z="${i % 6}"]`).catch(() => {}); await page.waitForTimeout(1700); }
-  }
+  await page.waitForFunction(() => window.__res || document.querySelector(".pk"), null, { timeout: 30000 });
   const res = await page.evaluate(() => window.__res);
-  console.log("resultado mata-mata:", JSON.stringify(res), res && (res.score[0] !== res.score[1] || (res.pens && res.pens[0] !== res.pens[1])) ? "OK (há vencedor)" : "FALHA");
-  console.log("erros:", errs.length, errs.join("\n"));
+  check(res && res.score.length === 2, "partida terminou: " + JSON.stringify(res && { score: res.score, gols: res.goals.map(g => g.name + " " + g.min + "'") }));
+  await ctx.close();
+
+  /* ---------- 2) celular em pé ---------- */
+  ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  page = await ctx.newPage();
+  page.on("pageerror", e => errs.push(e.message));
+  await page.goto(URL);
+  await start(page, {});
+  await page.waitForFunction(() => document.querySelector(".mv")._match.setPiece, null, { timeout: 8000 });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: SH + "22-toque-retrato.png" });
+  await ctx.close();
+
+  /* ---------- 3) controle (gamepad simulado), tela de TV ---------- */
+  ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  page = await ctx.newPage();
+  page.on("pageerror", e => errs.push(e.message));
+  await page.addInitScript(() => {
+    const pad = { connected: true, id: "Teste", index: 0, mapping: "standard", axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) };
+    window.__pad = pad;
+    window.__press = (i, on) => { pad.buttons[i] = { pressed: on, value: on ? 1 : 0 }; };
+    navigator.getGamepads = () => [pad];
+  });
+  await page.goto(URL);
+  await page.waitForSelector(".title");
+  const tapPad = async i => { await page.evaluate(i => window.__press(i, true), i); await page.waitForTimeout(90); await page.evaluate(i => window.__press(i, false), i); await page.waitForTimeout(160); };
+  // menus pelo controle: A em "Nova carreira"
+  await tapPad(13);
+  const foc = await page.evaluate(() => document.querySelector(".padfocus")?.textContent);
+  check(!!foc, "menu: foco pelo controle em \"" + foc + "\"");
+  await tapPad(0);
+  await page.waitForSelector(".grid", { timeout: 5000 }).catch(() => {});
+  check(!!(await page.$(".grid")), "menu: A abriu Nova carreira");
+  // desce até um clube e escolhe
+  for (let i = 0; i < 6; i++) await tapPad(13);
+  let tries = 0;
+  while (!(await page.evaluate(() => document.querySelector(".padfocus")?.classList.contains("pick"))) && tries++ < 12) await tapPad(13);
+  await tapPad(0);
+  const picked = await page.evaluate(() => window.__mh.ui.pick);
+  check(!!picked, "menu: clube escolhido pelo controle");
+  // vai até o botão Começar e confirma
+  tries = 0;
+  while (!(await page.evaluate(() => document.querySelector(".padfocus")?.dataset.act === "start")) && tries++ < 40) await tapPad(13);
+  await tapPad(0);
+  await page.waitForSelector(".next", { timeout: 8000 }).catch(() => {});
+  check(!!(await page.$(".next")), "menu: carreira iniciada pelo controle");
+  // LB/RB mudam de aba; B volta ao início
+  await tapPad(5);
+  check((await page.evaluate(() => window.__mh.ui.tab)) === "squad", "menu: RB muda de aba");
+  await tapPad(1);
+  check((await page.evaluate(() => window.__mh.ui.tab)) === "home", "menu: B volta ao início");
+  await page.screenshot({ path: SH + "23-menu-controle.png" });
+  // inicia o jogo pelo controle
+  tries = 0;
+  while (!(await page.evaluate(() => document.querySelector(".padfocus")?.dataset.act === "play")) && tries++ < 12) await tapPad(tries % 2 ? 15 : 13);
+  await tapPad(0);
+  await page.waitForSelector(".mv", { timeout: 8000 });
+  await page.waitForFunction(() => { const m = document.querySelector(".mv")._match; return m.setPiece || (m.state === "play" && m.ctrl); }, null, { timeout: 10000 });
+  await page.waitForTimeout(400);
+  const g0 = await state(page);
+  // analógico para a direita por um tempo
+  await page.evaluate(() => { window.__pad.axes[0] = 1; });
+  if (g0.setPiece && g0.owner === g0.ctrl) { await tapPad(0); await page.waitForTimeout(600); }
+  await page.waitForTimeout(900);
+  const g1 = await state(page);
+  check(g1.ctrl && (g1.x !== g0.x || g1.ctrl !== g0.ctrl), `partida: analógico do controle move (${g0.ctrl} ${g0.x} -> ${g1.ctrl} ${g1.x})`);
+  check(await page.evaluate(() => document.querySelector(".mv").classList.contains("pad")), "partida: botões de toque somem quando há controle");
+  await page.screenshot({ path: SH + "24-partida-tv.png" });
+  await page.evaluate(() => { window.__pad.axes[0] = 0; });
+  await tapPad(9);
+  check(await page.evaluate(() => !document.querySelector("#mvmenu").classList.contains("hidden")), "partida: Start pausa");
+  await tapPad(3);
+  await page.waitForSelector(".result", { timeout: 30000 }).catch(() => {});
+  check(!!(await page.$(".result")), "partida: Y no menu simula o resto e chega ao pós-jogo");
+  await page.screenshot({ path: SH + "25-pos-jogo-tv.png" });
+
+  console.log("erros de página:", errs.length, errs.join("\n"));
   await browser.close();
-  if (errs.length || !okMove) process.exit(1);
+  if (errs.length || fails) process.exit(1);
 })().catch(e => { console.error("FALHOU:", e.message); process.exit(1); });
