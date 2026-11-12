@@ -33,11 +33,24 @@ jobs:
           "CERT_SENHA=$senha" | Out-File -FilePath $env:GITHUB_ENV -Append
           "CERT_DIGITAL=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      # A imagem do GitHub muda de tempos em tempos; usa o SDK UWP mais novo que estiver instalado.
+      - name: Detectar Windows SDK (UWP)
+        shell: pwsh
+        run: |
+          $base = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\Platforms\UAP"
+          Write-Host "Plataformas UWP instaladas:"
+          Get-ChildItem $base -Directory | ForEach-Object { Write-Host "  $($_.Name)" }
+          $ver = Get-ChildItem $base -Directory | Where-Object { $_.Name -match '^10\.0\.\d+\.0$' } |
+            Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1 -ExpandProperty Name
+          if (-not $ver) { throw "Nenhum SDK UWP encontrado em $base" }
+          Write-Host "Usando $ver"
+          "SDK_UAP=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Compilar e empacotar
         shell: pwsh
         run: |
           msbuild xbox\MundialHax.sln /restore /m `
-            /p:Configuration=Release /p:Platform=x64 `
+            /p:Configuration=Release /p:Platform=x64 /p:TargetPlatformVersion=$env:SDK_UAP `
             /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:GenerateAppxPackageOnBuild=true `
             /p:AppxPackageSigningEnabled=true /p:PackageCertificateKeyFile=MundialHax_Teste.pfx `
             /p:PackageCertificatePassword=$env:CERT_SENHA /p:PackageCertificateThumbprint=$env:CERT_DIGITAL `
