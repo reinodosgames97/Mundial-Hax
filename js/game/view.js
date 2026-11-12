@@ -46,7 +46,8 @@ const SFX = {
 };
 
 /* ------------------------------ gamepad ------------------------------ */
-// Mapa padrão (Xbox): A passe/trocar, X ou B chute/bote, RT ou RB correr, LB ou Y trocar, Start pausa.
+// Mapa (padrão FIFA no Xbox): A passe (sem a bola: trocar), B chute (sem a bola: bote), X passe alto/cruzamento,
+// Y enfiada (com LB: enfiada por cima), LB trocar, analógico direito troca na direção, RT/RB correr, Start pausa.
 export function readPad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (const g of pads) {
@@ -55,7 +56,9 @@ export function readPad() {
     let x = g.axes[0] || 0, y = g.axes[1] || 0;
     if (Math.hypot(x, y) < 0.22) x = y = 0;
     if (B(14)) x = -1; if (B(15)) x = 1; if (B(12)) y = -1; if (B(13)) y = 1;
-    return { x, y, a: B(0), b: B(1), xb: B(2), yb: B(3), lb: B(4), rb: B(5), lt: B(6), rt: B(7), start: B(9), select: B(8), up: B(12) || y < -0.6, down: B(13) || y > 0.6, left: B(14) || x < -0.6, right: B(15) || x > 0.6 };
+    let rx = g.axes[2] || 0, ry = g.axes[3] || 0;
+    if (Math.hypot(rx, ry) < 0.25) rx = ry = 0;
+    return { x, y, rx, ry, a: B(0), b: B(1), xb: B(2), yb: B(3), lb: B(4), rb: B(5), lt: B(6), rt: B(7), start: B(9), select: B(8), up: B(12) || y < -0.6, down: B(13) || y > 0.6, left: B(14) || x < -0.6, right: B(15) || x > 0.6 };
   }
   return null;
 }
@@ -91,6 +94,7 @@ export function runMatch(root, opts) {
       <div class="mv-controls ${hasHuman ? "" : "hidden"}">
         <div class="mv-joy" id="mvjoy"><div class="mv-ring" id="mvring"><div class="mv-stick" id="mvstick"></div></div></div>
         <button class="mv-btn mv-sprint" id="mvsprint">CORRER</button>
+        <button class="mv-btn mv-thru" id="mvthru">ENFIADA</button>
         <button class="mv-btn mv-pass" id="mvpass">PASSE</button>
         <button class="mv-btn mv-kick" id="mvkick">CHUTE</button>
       </div>
@@ -99,9 +103,9 @@ export function runMatch(root, opts) {
           <h3>Jogo pausado</h3>
           <button class="btn primary" data-act="resume">Continuar</button>
           <button class="btn" data-act="skip">Simular o resto</button>
-          <p class="hint"><b>Toque:</b> analógico à esquerda; PASSE (segure para passe alto), CHUTE (segure para dar força), CORRER. Sem a bola: PASSE troca de jogador e CHUTE dá o bote.</p>
-          <p class="hint"><b>Controle:</b> A passe/trocar · X ou B chute/bote · RT correr · LB trocar · Start pausa (no menu: A continua, Y simula o resto).</p>
-          <p class="hint"><b>Teclado:</b> setas/WASD · J ou Z passe · K ou X chute · Shift ou L correr · C trocar · P pausa.</p>
+          <p class="hint"><b>Controle:</b> A passe · X passe alto · Y enfiada (LB+Y por cima) · B chute · RT correr. Sem a bola: A ou LB troca, analógico direito troca na direção, B ou X dá o bote. Aperte o passe antes da bola chegar para tocar de primeira. Start pausa (no menu: A continua, Y simula o resto).</p>
+          <p class="hint"><b>Toque:</b> analógico à esquerda; PASSE (segure para passe alto), ENFIADA, CHUTE (segure para dar força), CORRER. Sem a bola: PASSE troca e CHUTE dá o bote.</p>
+          <p class="hint"><b>Teclado:</b> setas/WASD · J passe · H passe alto · U enfiada · K chute · Shift correr · C trocar · P pausa.</p>
         </div>
       </div>`;
     root.appendChild(el);
@@ -129,7 +133,7 @@ export function runMatch(root, opts) {
     }
 
     /* ---------- controles ---------- */
-    const input = { x: 0, y: 0, pass: false, shoot: false, sprint: false };
+    const input = { x: 0, y: 0, rx: 0, ry: 0, pass: false, lob: false, shoot: false, through: false, sw: false, mod: false, sprint: false };
     const keys = new Set();
     const float = opts.stick === "float";
     let joyId = null, jox = 0, joy = 0, jx = 0, jy = 0;
@@ -157,8 +161,8 @@ export function runMatch(root, opts) {
     function joyEnd(e) { if (e.pointerId !== joyId) return; joyId = null; jx = jy = 0; stick.style.transform = ""; ring.classList.remove("on"); if (float) placeStick(); }
     joyEl.addEventListener("pointerdown", joyStart); joyEl.addEventListener("pointermove", joyMove);
     joyEl.addEventListener("pointerup", joyEnd); joyEl.addEventListener("pointercancel", joyEnd);
-    const touch = { pass: false, shoot: false, sprint: false };
-    for (const [id, key] of [["mvpass", "pass"], ["mvkick", "shoot"], ["mvsprint", "sprint"]]) {
+    const touch = { pass: false, shoot: false, sprint: false, through: false };
+    for (const [id, key] of [["mvpass", "pass"], ["mvkick", "shoot"], ["mvsprint", "sprint"], ["mvthru", "through"]]) {
       const b = $(id);
       const down = e => { touch[key] = true; b.classList.add("on"); b.setPointerCapture?.(e.pointerId); e.preventDefault(); };
       const up = () => { touch[key] = false; b.classList.remove("on"); };
@@ -168,14 +172,13 @@ export function runMatch(root, opts) {
     const onKey = e => {
       const k = e.key.toLowerCase();
       if (e.type === "keydown") {
-        if (!e.repeat && k === "c") m.switchCtrl();
         if (!e.repeat && (k === "escape" || k === "p")) togglePause();
         keys.add(k);
       } else keys.delete(k);
       if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
     };
     window.addEventListener("keydown", onKey); window.addEventListener("keyup", onKey);
-    let padPrev = {}, padSeen = false;
+    let padPrev = {}, padSeen = false, padMask = false;
     function readInput() {
       let sx = jx, sy = jy;   // vetor na tela (y para baixo)
       const dead = 0.14, l = Math.hypot(sx, sy);
@@ -185,19 +188,30 @@ export function runMatch(root, opts) {
       if (keys.has("arrowup") || keys.has("w")) sy -= 1;
       if (keys.has("arrowdown") || keys.has("s")) sy += 1;
       let pass = touch.pass || keys.has("j") || keys.has("z"), shoot = touch.shoot || keys.has("k") || keys.has("x"), sprint = touch.sprint || keys.has("shift") || keys.has("l");
+      let lob = keys.has("h"), through = touch.through || keys.has("u"), sw = keys.has("c"), mod = false, rx = 0, ry = 0;
       const g = readPad();
       if (g) {
         if (!padSeen) { padSeen = true; el.classList.add("pad"); }
         if (g.x || g.y) { sx = g.x; sy = g.y; }
-        pass = pass || g.a; shoot = shoot || g.xb || g.b; sprint = sprint || g.rt || g.rb;
-        if (!paused && ((g.lb && !padPrev.lb) || (g.yb && !padPrev.yb))) m.switchCtrl();
-        if (paused) { if (g.a && !padPrev.a) togglePause(false); else if (g.yb && !padPrev.yb) { fastForward(); togglePause(false); } }
+        rx = g.rx; ry = g.ry;
+        if (paused) {
+          if (g.a && !padPrev.a) { togglePause(false); padMask = true; }
+          else if (g.yb && !padPrev.yb) { fastForward(); togglePause(false); padMask = true; }
+        }
         if (g.start && !padPrev.start) togglePause();
+        // ao sair da pausa, ignora os botões até todos serem soltos (o A que despausou não vira passe)
+        const anyBtn = g.a || g.b || g.xb || g.yb || g.lb;
+        if (padMask && !anyBtn) padMask = false;
+        if (!padMask) {
+          pass = pass || g.a; shoot = shoot || g.b; lob = lob || g.xb; through = through || g.yb;
+          sw = sw || g.lb; mod = g.lb;
+        }
+        sprint = sprint || g.rt || g.rb;
         padPrev = g;
       }
       const ml = Math.hypot(sx, sy); if (ml > 1) { sx /= ml; sy /= ml; }
-      if (portrait) { input.x = -sy; input.y = sx; } else { input.x = sx; input.y = sy; }
-      input.pass = pass; input.shoot = shoot; input.sprint = sprint;
+      if (portrait) { input.x = -sy; input.y = sx; input.rx = -ry; input.ry = rx; } else { input.x = sx; input.y = sy; input.rx = rx; input.ry = ry; }
+      input.pass = pass; input.lob = lob; input.shoot = shoot; input.through = through; input.sw = sw; input.mod = mod; input.sprint = sprint;
     }
 
     /* ---------- pausa ---------- */
@@ -308,8 +322,19 @@ export function runMatch(root, opts) {
           const bw = 30, bx = x - bw / 2, by = y - S * 1.5 - 9;
           ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(bx, by, bw, 4);
           ctx.fillStyle = c.tired ? "#ff6b5e" : "#3ddc84"; ctx.fillRect(bx, by, bw * clamp(c.stamina, 0, 1), 4);
-          if (m.charge > 0) { ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(bx - 5, by - 9, bw + 10, 6); ctx.fillStyle = m.chargeKind === "shot" ? (m.charge > 0.8 ? "#ff6b5e" : "#ffb300") : "#29b6f6"; ctx.fillRect(bx - 5, by - 9, (bw + 10) * m.charge, 6); }
+          if (m.charge > 0) { ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(bx - 5, by - 9, bw + 10, 6); ctx.fillStyle = m.chargeKind === "shot" ? (m.charge > 0.8 ? "#ff6b5e" : "#ffb300") : m.chargeKind === "through" ? "#ce93d8" : "#29b6f6"; ctx.fillRect(bx - 5, by - 9, (bw + 10) * m.charge, 6); }
         }
+      }
+      if (hasHuman && m.nextSw && m.state === "play") {   // quem assume se apertar a troca
+        const [x, y] = sp(m.nextSw.x, m.nextSw.y), yy = y - S * 1.55 - 3, w = Math.max(7, S * 0.7);
+        ctx.fillStyle = "rgba(255,255,255,.95)"; ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x - w, yy - w * 1.2); ctx.lineTo(x + w, yy - w * 1.2); ctx.lineTo(x, yy); ctx.closePath(); ctx.stroke(); ctx.fill();
+      }
+      if (hasHuman && m.queued && b.target) {   // toque de primeira guardado
+        const [x, y] = sp(b.target.x, b.target.y);
+        ctx.font = "800 10px system-ui, sans-serif"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.fillStyle = "#ffeb3b";
+        const lbl = { pass: "1º TOQUE", lob: "1º TOQUE ALTO", shoot: "CHUTE DE 1ª", through: "ENFIADA DE 1ª" }[m.queued.k] || "1º TOQUE";
+        ctx.strokeText(lbl, x, y - S * 1.5 - 16); ctx.fillText(lbl, x, y - S * 1.5 - 16);
       }
       drawRadar();
     }
@@ -359,7 +384,7 @@ export function runMatch(root, opts) {
       if (hasHuman && m.human !== null) {
         const mine = (m.ball.owner && m.ball.owner.team === m.human) || (m.ball.target && m.ball.target.team === m.human);
         const mode = mine ? "a" : "d";
-        if (mode !== lastMode) { lastMode = mode; $("mvpass").textContent = mine ? "PASSE" : "TROCAR"; $("mvkick").textContent = mine ? "CHUTE" : "BOTE"; }
+        if (mode !== lastMode) { lastMode = mode; $("mvpass").textContent = mine ? "PASSE" : "TROCAR"; $("mvkick").textContent = mine ? "CHUTE" : "BOTE"; $("mvthru").style.opacity = mine ? "1" : ".45"; }
       }
       draw();
       if (m.state === "end" && !done) { done = true; setTimeout(finishUp, 900); }

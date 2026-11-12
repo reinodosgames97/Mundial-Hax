@@ -6,20 +6,24 @@ Funciona no **celular** (toque), no **computador** (teclado ou controle) e no **
 
 ## Como jogar
 
-| Ação | Toque | Controle (Xbox) | Teclado |
+| Ação | Toque | Controle (Xbox, padrão FIFA) | Teclado |
 | --- | --- | --- | --- |
 | Mover | Analógico fixo à esquerda | Analógico esquerdo / direcional | Setas ou WASD |
-| Passe | `PASSE` (toque rápido) | A | J ou Z |
-| Passe alto / lançamento | segure `PASSE` | segure A | segure J ou Z |
-| Chute | segure `CHUTE` para dar força | X ou B | K ou X |
-| Correr | `CORRER` | RT (ou RB) | Shift ou L |
-| Sem a bola: trocar de jogador | `PASSE` (vira `TROCAR`) | A ou LB | J ou C |
-| Sem a bola: bote | `CHUTE` (vira `BOTE`) | X ou B | K |
+| Passe | `PASSE` (toque rápido) | A | J |
+| Passe alto / cruzamento | segure `PASSE` | X (ou segure A) | H |
+| Enfiada (bola no espaço) | `ENFIADA` | Y · LB+Y por cima | U |
+| Chute | segure `CHUTE` para dar força | B | K |
+| Correr | `CORRER` | RT (ou RB) | Shift |
+| Sem a bola: trocar de jogador | `PASSE` (vira `TROCAR`) | LB ou A · analógico direito na direção | C |
+| Sem a bola: bote | `CHUTE` (vira `BOTE`) | B ou X | K |
 | Pausar | ❚❚ | Menu (Start) | P ou Esc |
 
 - **Passe semi-assistido:** a bola vai para o companheiro que está na direção apontada, já com a força certa e antecipando a corrida dele; a sua mira ainda puxa um pouco a direção. Sem ninguém na direção, o passe sai livre.
 - **Chute:** quanto mais tempo segurando, mais forte (e mais alto — força demais isola). Apontar para o gol escolhe o canto; a precisão depende do jogador, da pressão e da força.
 - Ao passar, o controle vai para quem recebe; sem mexer no analógico ele domina a bola sozinho.
+- **Toque de primeira:** aperte passe, enfiada ou chute enquanto a bola ainda está indo para o companheiro. A ação fica guardada (aparece "1º TOQUE" em cima dele) e sai assim que ele dominar, um pouco menos precisa que um passe com a bola dominada.
+- **Enfiada:** a bola vai para o espaço à frente do companheiro escolhido, no tempo da corrida dele. Segurar mais deixa a bola mais longa. A IA também usa.
+- **Troca de jogador:** sem a bola, LB (ou A) assume quem está em melhor posição para defender, chegando na frente do adversário pelo lado do nosso gol; a seta branca mostra quem será. Apertando de novo em seguida passa para o próximo. O analógico direito troca para o jogador naquela direção.
 - O goleiro é automático. Há lateral, escanteio e tiro de meta. Mata-mata empatado: prorrogação com **gol de ouro** e depois **pênaltis**.
 - Nos menus, o controle também funciona: direcional navega, A confirma, B volta, LB/RB trocam de aba.
 
@@ -90,6 +94,7 @@ Testes:
 npm test                                   # simula 6 temporadas completas e confere invariantes
 node tools/test-vagas.mjs                  # acúmulo de vagas (G4 -> G5...)
 node tools/test-match.mjs 20               # partidas IA x IA: placares, passes, efeito de elenco e dificuldade
+node tools/test-controls.mjs               # controles: toque de primeira, enfiada, troca pelo botão e pelo analógico direito
 node tools/serve.mjs 8123 &                # e, com o servidor no ar:
 node tools/e2e.cjs                         # carreira ponta a ponta no navegador (Playwright)
 node tools/e2e-match.cjs                   # toque, controle (gamepad simulado), pausa

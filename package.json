@@ -6,6 +6,6 @@
   "description": "Futebol 11x11 visto de cima com modo carreira de clubes brasileiros.",
   "scripts": {
     "start": "node tools/serve.mjs",
-    "test": "node tools/test-season.mjs && node tools/test-vagas.mjs"
+    "test": "node tools/test-season.mjs && node tools/test-vagas.mjs && node tools/test-controls.mjs"
   }
 }

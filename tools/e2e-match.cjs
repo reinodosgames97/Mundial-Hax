@@ -63,13 +63,18 @@ const state = page => page.evaluate(() => {
   await page.screenshot({ path: SH + "21-toque-paisagem.png" });
   // chute carregado
   const kb = await page.evaluate(() => { const r = document.querySelector("#mvkick").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
-  const hadBall = (await state(page)).owner === (await state(page)).ctrl;
+  // garante a posse no instante do toque (pausa o jogo, dá a bola ao jogador controlado e retoma)
+  const before = await page.evaluate(() => {
+    const m = document.querySelector(".mv")._match, c = m.ctrl;
+    m.setPiece = null; m.state = "play"; m.ball.owner = null; m.own(c); c.protect = 120;
+    return m.stats.shots[0];
+  });
   await touch("touchStart", [[ring[0] + 50, ring[1], 1], [kb[0], kb[1], 3]]);
   await page.waitForTimeout(350);
   await touch("touchEnd", [[kb[0], kb[1], 3]]);
   await page.waitForTimeout(120);
   let s4 = await state(page);
-  if (hadBall) check(s4.shots >= 1 || s4.bspeed > 12, "chute carregado saiu (velocidade da bola " + s4.bspeed + ")");
+  check(s4.shots === before + 1, "chute carregado pelo toque saiu (velocidade da bola " + s4.bspeed + " m/s)");
   await touch("touchEnd", [[ring[0] + 50, ring[1], 1]]);
   // pausa e simular o resto
   await page.tap(".mv-pause");

@@ -185,6 +185,7 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 13.5px; font-varia
 .mv-kick { right: calc(16px + var(--sar)); bottom: calc(22px + var(--sab)); width: 92px; height: 92px; font-size: 14px; background: #e53935aa; }
 .mv-pass { right: calc(118px + var(--sar)); bottom: calc(14px + var(--sab)); width: 82px; height: 82px; font-size: 13px; background: #1e88e5aa; }
 .mv-sprint { right: calc(34px + var(--sar)); bottom: calc(124px + var(--sab)); width: 72px; height: 72px; font-size: 11px; background: #43a047aa; }
+.mv-thru { right: calc(128px + var(--sar)); bottom: calc(108px + var(--sab)); width: 66px; height: 66px; font-size: 10px; background: #8e24aaaa; }
 .mv-note { position: absolute; left: 0; right: 0; top: calc(52px + var(--sat)); text-align: center; font-size: 14px; font-weight: 700; text-shadow: 0 1px 3px #000; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .mv-note.show { opacity: 1; }
 .mv-menu { position: absolute; inset: 0; background: #000b; display: flex; align-items: center; justify-content: center; padding: 20px; }
