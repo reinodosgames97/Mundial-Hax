@@ -46,8 +46,9 @@ const SFX = {
 };
 
 /* ------------------------------ gamepad ------------------------------ */
-// Mapa (padrão FIFA no Xbox): A passe (sem a bola: trocar), B chute (sem a bola: bote), X passe alto/cruzamento,
-// Y enfiada (com LB: enfiada por cima), LB trocar, analógico direito troca na direção, RT/RB correr, Start pausa.
+// Mapa (padrão FIFA no Xbox): A passe (sem a bola: toque troca, segurado contém), B chute (RB+B colocado; sem a bola: bote),
+// X passe alto/cruzamento, Y enfiada (LB+Y por cima), LB trocar, analógico direito troca na direção, RT correr,
+// LT proteger a bola (sem a bola: acompanhar de frente), RB condução colada (sem a bola: companheiro pressiona), Start pausa.
 export function readPad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (const g of pads) {
@@ -103,9 +104,10 @@ export function runMatch(root, opts) {
           <h3>Jogo pausado</h3>
           <button class="btn primary" data-act="resume">Continuar</button>
           <button class="btn" data-act="skip">Simular o resto</button>
-          <p class="hint"><b>Controle:</b> A passe · X passe alto · Y enfiada (LB+Y por cima) · B chute · RT correr. Sem a bola: A ou LB troca, analógico direito troca na direção, B ou X dá o bote. Aperte o passe antes da bola chegar para tocar de primeira. Start pausa (no menu: A continua, Y simula o resto).</p>
+          <p class="hint"><b>Controle com a bola:</b> A passe · X passe alto/cruzamento · Y enfiada (LB+Y por cima) · B chute (RB+B colocado) · RT correr · LT proteger · RB condução colada. Apertar antes da bola chegar = toque de primeira.</p>
+          <p class="hint"><b>Sem a bola:</b> A toque = troca, A segurado = conter · LB troca · analógico direito troca na direção · RB companheiro pressiona · LT acompanhar de frente · B ou X bote. Start pausa (no menu: A continua, Y simula o resto).</p>
           <p class="hint"><b>Toque:</b> analógico à esquerda; PASSE (segure para passe alto), ENFIADA, CHUTE (segure para dar força), CORRER. Sem a bola: PASSE troca e CHUTE dá o bote.</p>
-          <p class="hint"><b>Teclado:</b> setas/WASD · J passe · H passe alto · U enfiada · K chute · Shift correr · C trocar · P pausa.</p>
+          <p class="hint"><b>Teclado:</b> setas/WASD · J passe (segurar sem a bola: conter) · H passe alto · U enfiada · K chute (E+K colocado) · Shift correr · Q proteger · E condução colada/pressão · C trocar · P pausa.</p>
         </div>
       </div>`;
     root.appendChild(el);
@@ -133,7 +135,7 @@ export function runMatch(root, opts) {
     }
 
     /* ---------- controles ---------- */
-    const input = { x: 0, y: 0, rx: 0, ry: 0, pass: false, lob: false, shoot: false, through: false, sw: false, mod: false, sprint: false };
+    const input = { x: 0, y: 0, rx: 0, ry: 0, pass: false, lob: false, shoot: false, through: false, sw: false, mod: false, lt: false, rb: false, sprint: false };
     const keys = new Set();
     const float = opts.stick === "float";
     let joyId = null, jox = 0, joy = 0, jx = 0, jy = 0;
@@ -189,6 +191,7 @@ export function runMatch(root, opts) {
       if (keys.has("arrowdown") || keys.has("s")) sy += 1;
       let pass = touch.pass || keys.has("j") || keys.has("z"), shoot = touch.shoot || keys.has("k") || keys.has("x"), sprint = touch.sprint || keys.has("shift") || keys.has("l");
       let lob = keys.has("h"), through = touch.through || keys.has("u"), sw = keys.has("c"), mod = false, rx = 0, ry = 0;
+      let lt = keys.has("q"), rb = keys.has("e");
       const g = readPad();
       if (g) {
         if (!padSeen) { padSeen = true; el.classList.add("pad"); }
@@ -204,14 +207,14 @@ export function runMatch(root, opts) {
         if (padMask && !anyBtn) padMask = false;
         if (!padMask) {
           pass = pass || g.a; shoot = shoot || g.b; lob = lob || g.xb; through = through || g.yb;
-          sw = sw || g.lb; mod = g.lb;
+          sw = sw || g.lb; mod = g.lb; lt = lt || g.lt; rb = rb || g.rb;
         }
-        sprint = sprint || g.rt || g.rb;
+        sprint = sprint || g.rt;
         padPrev = g;
       }
       const ml = Math.hypot(sx, sy); if (ml > 1) { sx /= ml; sy /= ml; }
       if (portrait) { input.x = -sy; input.y = sx; input.rx = -ry; input.ry = rx; } else { input.x = sx; input.y = sy; input.rx = rx; input.ry = ry; }
-      input.pass = pass; input.lob = lob; input.shoot = shoot; input.through = through; input.sw = sw; input.mod = mod; input.sprint = sprint;
+      input.pass = pass; input.lob = lob; input.shoot = shoot; input.through = through; input.sw = sw; input.mod = mod; input.lt = lt; input.rb = rb; input.sprint = sprint;
     }
 
     /* ---------- pausa ---------- */

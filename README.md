@@ -13,8 +13,14 @@ Funciona no **celular** (toque), no **computador** (teclado ou controle) e no **
 | Passe alto / cruzamento | segure `PASSE` | X (ou segure A) | H |
 | Enfiada (bola no espaço) | `ENFIADA` | Y · LB+Y por cima | U |
 | Chute | segure `CHUTE` para dar força | B | K |
-| Correr | `CORRER` | RT (ou RB) | Shift |
-| Sem a bola: trocar de jogador | `PASSE` (vira `TROCAR`) | LB ou A · analógico direito na direção | C |
+| Chute colocado (com curva) | — | RB+B | E+K |
+| Correr | `CORRER` | RT | Shift |
+| Proteger a bola | — | LT | Q |
+| Condução colada | — | RB | E |
+| Sem a bola: trocar de jogador | `PASSE` (vira `TROCAR`) | toque em A ou LB · analógico direito na direção | C |
+| Sem a bola: conter o atacante | — | segure A | segure J |
+| Sem a bola: companheiro pressiona | — | RB | E |
+| Sem a bola: acompanhar de frente | — | LT | Q |
 | Sem a bola: bote | `CHUTE` (vira `BOTE`) | B ou X | K |
 | Pausar | ❚❚ | Menu (Start) | P ou Esc |
 
@@ -24,6 +30,10 @@ Funciona no **celular** (toque), no **computador** (teclado ou controle) e no **
 - **Toque de primeira:** aperte passe, enfiada ou chute enquanto a bola ainda está indo para o companheiro. A ação fica guardada (aparece "1º TOQUE" em cima dele) e sai assim que ele dominar, um pouco menos precisa que um passe com a bola dominada.
 - **Enfiada:** a bola vai para o espaço à frente do companheiro escolhido, no tempo da corrida dele. Segurar mais deixa a bola mais longa. A IA também usa.
 - **Troca de jogador:** sem a bola, LB (ou A) assume quem está em melhor posição para defender, chegando na frente do adversário pelo lado do nosso gol; a seta branca mostra quem será. Apertando de novo em seguida passa para o próximo. O analógico direito troca para o jogador naquela direção.
+- **Defesa:** segurar A faz o seu jogador conter o atacante, ficando entre ele e o gol e acompanhando a corrida. RB chama mais um companheiro para pressionar o portador. LT acompanha de frente, mais devagar e com bote mais eficiente. Se você perde a bola e fica caído ou para trás, o controle passa sozinho para quem está na frente da jogada (sem passar por cima de uma troca feita na mão).
+- **Proteção e condução:** LT com a bola protege, mais devagar e com a bola do lado oposto ao marcador, muito mais difícil de desarmar. RB com a bola conduz com a bola colada ao pé e vira mais rápido.
+- **Chute colocado (RB+B):** mais fraco e mais preciso. Sai por fora do alvo e curva de volta para dentro, e o goleiro lê a linha reta.
+- **Cruzamento e cabeceio:** pelo lado, perto da área, o passe alto (X) vai para a cabeça de quem está na área. A bola alta pode ser cabeceada por qualquer jogador perto dela: no ataque, para o gol; na defesa, para longe. A IA também cruza.
 - O goleiro é automático. Há lateral, escanteio e tiro de meta. Mata-mata empatado: prorrogação com **gol de ouro** e depois **pênaltis**.
 - Nos menus, o controle também funciona: direcional navega, A confirma, B volta, LB/RB trocam de aba.
 
@@ -94,7 +104,7 @@ Testes:
 npm test                                   # simula 6 temporadas completas e confere invariantes
 node tools/test-vagas.mjs                  # acúmulo de vagas (G4 -> G5...)
 node tools/test-match.mjs 20               # partidas IA x IA: placares, passes, efeito de elenco e dificuldade
-node tools/test-controls.mjs               # controles: toque de primeira, enfiada, troca pelo botão e pelo analógico direito
+node tools/test-controls.mjs               # controles: toque de primeira, enfiada, trocas, recepção, conter, pressão, proteção, chute colocado, cruzamento
 node tools/serve.mjs 8123 &                # e, com o servidor no ar:
 node tools/e2e.cjs                         # carreira ponta a ponta no navegador (Playwright)
 node tools/e2e-match.cjs                   # toque, controle (gamepad simulado), pausa

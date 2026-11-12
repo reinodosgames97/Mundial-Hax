@@ -75,7 +75,7 @@ function vHelp() {
   return page("Como jogar", "", `
     <div class="card"><h3>Partida</h3>
       <p>Futebol 11 contra 11 visto de cima, com o elenco do clube. <b>Passe</b> (A): vai rasteiro para o companheiro na direção do analógico (semi-assistido); segurando sai mais alto. <b>Passe alto</b> (X) e <b>enfiada</b> (Y, a bola vai no espaço à frente do companheiro; LB+Y por cima). <b>Chute</b> (B): segure para dar força e aponte para escolher o canto. <b>Correr</b> (RT) gasta fôlego.</p>
-      <p>Aperte o passe, a enfiada ou o chute <b>antes da bola chegar</b> no companheiro e ele toca de primeira assim que dominar. Sem a bola: A ou LB troca para o jogador em melhor posição (a seta branca mostra quem; apertando de novo passa para o próximo), o analógico direito troca para o jogador naquela direção, e B ou X dá o bote. O goleiro é automático. Há lateral, escanteio e tiro de meta; não há impedimento nem faltas. Mata-mata empatado vai para prorrogação com gol de ouro e pênaltis.</p>
+      <p>Aperte o passe, a enfiada ou o chute <b>antes da bola chegar</b> no companheiro e ele toca de primeira assim que dominar. Pelo lado, perto da área, o passe alto vira cruzamento e quem estiver na área cabeceia. Com a bola: LT protege, RB conduz colado ao pé e RB+B é o chute colocado. Sem a bola: tocar A troca para o jogador em melhor posição (a seta branca mostra quem), segurar A faz o seu jogador conter o atacante, RB chama um companheiro para pressionar e o analógico direito troca para o jogador naquela direção; B ou X dá o bote. Se você perde a bola e fica para trás, o controle passa sozinho para quem está na frente da jogada. O goleiro é automático. Há lateral, escanteio e tiro de meta; não há impedimento nem faltas. Mata-mata empatado vai para prorrogação com gol de ouro e pênaltis.</p>
       <p class="hint">Funciona com toque, teclado ou controle (Xbox, PlayStation etc.). Com o celular deitado o campo aparece maior.</p></div>
     <div class="card"><h3>Carreira</h3>
       <p>Você disputa tudo o que o clube disputaria: estadual, Brasileirão (Séries A a D), Copa do Brasil, Libertadores, Sul-Americana, Recopa, Supercopa, Intercontinental e a Copa do Mundo de Clubes (a cada quatro anos, a partir de 2029).</p>
@@ -284,8 +284,9 @@ function tOpts() {
     </div>
     <div class="card"><h3>Controles</h3>
       <p class="hint" style="margin-top:0"><b>Toque:</b> analógico à esquerda; PASSE (toque rápido = rasteiro, segurando = alto), ENFIADA, CHUTE (segure para dar força), CORRER. Sem a bola, PASSE troca de jogador e CHUTE dá o bote.</p>
-      <p class="hint"><b>Controle (Xbox e outros):</b> analógico esquerdo move · A passe · X passe alto · Y enfiada (LB+Y por cima) · B chute · RT correr. Sem a bola: A ou LB troca, analógico direito troca na direção, B ou X bote. Apertar antes da bola chegar = toque de primeira. Start pausa. Nos menus: direcional navega, A confirma, B volta, LB/RB mudam de aba.</p>
-      <p class="hint"><b>Teclado:</b> setas ou WASD · J passe · H passe alto · U enfiada · K chute · Shift correr · C trocar · P pausa.</p>
+      <p class="hint"><b>Controle (Xbox e outros), com a bola:</b> A passe · X passe alto (pelo lado no ataque vira cruzamento) · Y enfiada (LB+Y por cima) · B chute (RB+B colocado, com curva) · RT correr · LT proteger a bola · RB condução colada. Apertar antes da bola chegar = toque de primeira.</p>
+      <p class="hint"><b>Sem a bola:</b> A toque troca / A segurado contém o atacante · LB troca · analógico direito troca na direção · RB chama um companheiro para pressionar · LT acompanha de frente · B ou X dá o bote. Start pausa. Nos menus: direcional navega, A confirma, B volta, LB/RB mudam de aba.</p>
+      <p class="hint"><b>Teclado:</b> setas ou WASD · J passe (segurar sem a bola: conter) · H passe alto · U enfiada · K chute (E+K colocado) · Shift correr · Q proteger · E condução colada / pressão · C trocar · P pausa.</p>
     </div>
     <div class="card"><h3>Dados</h3>
       <button class="btn" data-act="title">Voltar ao menu</button>
