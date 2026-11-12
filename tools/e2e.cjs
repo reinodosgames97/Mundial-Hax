@@ -52,6 +52,7 @@ require("fs").mkdirSync(SH, { recursive: true });
   // simula o resto da temporada e vira o ano
   await page.click('.nav [data-v="opts"]');
   await page.click('[data-act="simall"]');
+  await page.click('.modal [data-r="1"]');
   await page.waitForSelector('[data-act="endseason"]', { timeout: 30000 });
   await shot("08-fim-temporada");
   await page.click('[data-act="endseason"]');

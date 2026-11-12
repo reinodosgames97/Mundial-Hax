@@ -13,9 +13,10 @@ window.__crestOk = img => img.parentNode.classList.add("ok");
 export function crest(id, size) {
   const c = club(id);
   if (!c) return "";
-  const url = crestUrl(id), fb = crestFallback(id);
+  const url = window.__NO_CRESTS ? "" : crestUrl(id), fb = crestFallback(id);
   const img = url ? `<img alt="" loading="lazy" referrerpolicy="no-referrer" src="${esc(url)}" data-fb="${esc(fb)}" onload="__crestOk(this)" onerror="__crestErr(this)">` : "";
-  return `<span class="crest" style="${size ? `--s:${size}px;` : ""}--c1:${c.c1};--c2:${c.c2}"><span>${esc(abbr(id))}</span>${img}</span>`;
+  const h = c.c1.replace("#", ""), lum = parseInt(h.slice(0, 2), 16) * 0.299 + parseInt(h.slice(2, 4), 16) * 0.587 + parseInt(h.slice(4, 6), 16) * 0.114;
+  return `<span class="crest" style="${size ? `--s:${size}px;` : ""}--c1:${c.c1};--c2:${c.c2};--ct:${lum > 150 ? "#111" : "#fff"}"><span>${esc(abbr(id))}</span>${img}</span>`;
 }
 
 let G = null, ev = null;
@@ -24,6 +25,16 @@ const DIV_LABEL = { A: "Série A", B: "Série B", C: "Série C", D: "Série D", 
 const rating = id => Math.round(G ? R(G, id) : club(id).r0);
 
 function toast(t) { const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), 2200); }
+// confirmação dentro da página (confirm() nativo não funciona em todos os ambientes)
+function ask(text, okLabel = "Confirmar") {
+  return new Promise(resolve => {
+    const el = document.createElement("div");
+    el.className = "modal";
+    el.innerHTML = `<div class="modal-box" role="dialog" aria-modal="true"><p>${esc(text)}</p><div class="row"><button class="btn" data-r="0">Cancelar</button><button class="btn primary" data-r="1">${esc(okLabel)}</button></div></div>`;
+    el.addEventListener("click", e => { const r = e.target.dataset?.r; if (r === undefined && e.target !== el) return; el.remove(); resolve(r === "1"); });
+    document.body.appendChild(el);
+  });
+}
 function persist() { if (G && !save(G)) toast("Não foi possível salvar (armazenamento cheio ou bloqueado)."); }
 function refreshEvent() { ev = step(G); persist(); }
 
@@ -320,7 +331,7 @@ const ACT = {
   title() { ui.screen = "title"; render(); },
   help() { ui.screen = "help"; render(); },
   hub() { ui.changing = false; ui.screen = ui.summary ? "summary" : "hub"; render(); },
-  new() { if (load() && !confirm("Começar uma nova carreira apaga a carreira salva. Continuar?")) return; ui.changing = false; ui.pick = null; ui.screen = "new"; render(); },
+  async new() { if (load() && !(await ask("Começar uma nova carreira apaga a carreira salva. Continuar?", "Nova carreira"))) return; ui.changing = false; ui.pick = null; ui.screen = "new"; render(); },
   continue() { G = load(); if (!G) return; ev = step(G); ui.screen = "hub"; ui.tab = "home"; render(); },
   picktab(v) { ui.pickTab = v; render(); },
   pick(v) { ui.pick = +v; ui.keepScroll = app.querySelector(".body").scrollTop; saveCoach(); render(); },
@@ -333,8 +344,8 @@ const ACT = {
   play() { doMatch(false); },
   sim() { doMatch(true); },
   postok() { ui.post = null; ev = step(G); persist(); ui.screen = "hub"; ui.tab = "home"; render(); },
-  simall() {
-    if (!confirm("Simular todos os jogos restantes da temporada?")) return;
+  async simall() {
+    if (!(await ask("Simular todos os jogos restantes da temporada?", "Simular"))) return;
     let guard = 0;
     while (ev?.type === "match" && guard++ < 400) { simUser(G, ev.match); ev = step(G); }
     persist(); ui.tab = "home"; render();
@@ -348,7 +359,7 @@ const ACT = {
   size(v) { G.opts.size = +v; persist(); render(); },
   auto(v) { G.opts.autoSwitch = v === "1"; persist(); render(); },
   sound(v) { G.opts.sound = v === "1"; persist(); render(); },
-  wipe() { if (!confirm("Apagar a carreira salva? Isso não pode ser desfeito.")) return; wipe(); G = null; ev = null; ui.summary = null; ui.screen = "title"; render(); },
+  async wipe() { if (!(await ask("Apagar a carreira salva? Isso não pode ser desfeito.", "Apagar"))) return; wipe(); G = null; ev = null; ui.summary = null; ui.screen = "title"; render(); },
 };
 function saveCoach() { const el = document.getElementById("coach"); if (el) ui.coach = el.value.trim(); }
 app.addEventListener("click", e => {

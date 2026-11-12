@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #0e1512; --panel: #17211c; --panel2: #1f2c25; --line: #2b3a31; --text: #eef3ef; --muted: #9db0a4;
   --accent: #3ddc84; --accent-ink: #062414; --warn: #ffb300; --bad: #ff6b5e; --gold: #f5c518;
   --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
@@ -52,7 +53,7 @@ label.field > span { display: block; margin-bottom: 6px; }
 
 /* ---------- escudos ---------- */
 .crest { --s: 28px; position: relative; display: inline-flex; flex: none; width: var(--s); height: var(--s); align-items: center; justify-content: center; border-radius: 50%; background: var(--c1, #444); border: 2px solid var(--c2, #fff); overflow: hidden; vertical-align: middle; }
-.crest > span { font-size: calc(var(--s) * .3); font-weight: 800; color: #fff; mix-blend-mode: difference; letter-spacing: -.02em; }
+.crest > span { font-size: calc(var(--s) * .3); font-weight: 800; color: var(--ct, #fff); letter-spacing: -.02em; }
 .crest > img { position: absolute; inset: -2px; width: calc(100% + 4px); height: calc(100% + 4px); object-fit: contain; opacity: 0; }
 .crest.ok { border-color: transparent; background: transparent; border-radius: 0; }
 .crest.ok > img { opacity: 1; }
@@ -136,6 +137,10 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 13.5px; font-varia
 .result .verdict { font-weight: 800; font-size: 16px; margin-top: 4px; }
 .verdict.V { color: var(--accent); } .verdict.D { color: var(--bad); }
 .toast { position: fixed; left: 50%; bottom: calc(80px + var(--sab)); transform: translateX(-50%); background: #000c; padding: 10px 16px; border-radius: 999px; font-size: 13px; z-index: 50; pointer-events: none; }
+
+.modal { position: fixed; inset: 0; z-index: 200; background: #000b; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; width: min(360px, 100%); }
+.modal-box p { margin: 0 0 16px; font-size: 16px; }
 
 /* ---------- partida ---------- */
 .mv { position: fixed; inset: 0; z-index: 100; background: #16321f; touch-action: none; user-select: none; -webkit-user-select: none; overflow: hidden; }
