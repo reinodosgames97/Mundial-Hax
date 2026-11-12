@@ -124,6 +124,24 @@ const dirTo = (a, b) => { const l = hyp(b.x - a.x, b.y - a.y) || 1; return [(b.x
   check(total > 0 && hits === total, `analógico direito escolhe o jogador apontado (${hits}/${total})`);
 }
 
+/* 4b) recepção: mesmo mexendo o analógico (até ~100° fora da direção da bola), o recebedor vai na bola */
+{
+  let ok = 0, n = 0;
+  for (let s = 51; s <= 62; s++) {
+    const g = newGame(s);
+    const c = g.ctrl, r1 = g.teams[0].filter(p => p !== c && !p.isGK).sort((a, b) => hyp(a.x - c.x, a.y - c.y) - hyp(b.x - c.x, b.y - c.y))[0];
+    press(g, "pass", 3, dirTo(c, r1));
+    if (g.ball.target !== r1) continue;
+    n++;
+    // o usuário já empurra o analógico perpendicular à linha do passe (querendo sair jogando de lado)
+    const [bx, by] = dirTo(c, r1), perp = s % 2 ? [-by, bx] : [by, -bx];
+    let got = false;
+    for (let i = 0; i < 150 && !got; i++) { g.tick({ ...NONE, x: perp[0], y: perp[1] }); if (g.ball.owner === r1) got = true; if (g.ball.owner && g.ball.owner.team === 1) break; }
+    if (got) ok++;
+  }
+  check(n > 0 && ok >= n - 1, `recebedor vai na bola mesmo com o analógico apontado para o lado (${ok}/${n})`);
+}
+
 /* 5) chute carregado, passe alto (X) e chute de primeira guardado */
 {
   const g = newGame(41);

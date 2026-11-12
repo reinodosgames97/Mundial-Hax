@@ -193,6 +193,7 @@ export class Game {
     let mag = hyp(inp.x || 0, inp.y || 0), sx = inp.x || 0, sy = inp.y || 0;
     if (mag > 1) { sx /= mag; sy /= mag; mag = 1; }
     this.assist = mag < 0.18;
+    if (this.assist) this.lastStick = null;
     if (o && o.team === H && !o.isGK && this.ctrl !== o) this.setCtrl(o);
     if (this.ctrlCd > 0) this.ctrlCd--;
     if (!this.ctrl) return;
@@ -216,7 +217,26 @@ export class Game {
     const cc = this.ctrl, taking = this.setPiece && this.setPiece.taker === cc;
     if (cc.stun === 0 && cc.lunge === 0) {
       if (taking) { cc.mx = cc.my = 0; if (!this.assist) { cc.fx = sx / mag; cc.fy = sy / mag; } }
-      else if (!this.assist) { cc.mx = sx; cc.my = sy; cc.frac = 1; cc.sprint = !!inp.sprint; }
+      else if (!this.assist) {
+        cc.mx = sx; cc.my = sy; cc.frac = 1; cc.sprint = !!inp.sprint;
+        // recepção assistida (como no FIFA): com a bola vindo para ele, o jogador vai ao encontro dela;
+        // o analógico só ajusta a corrida e escolhe a direção do primeiro toque. Apontar bem para o lado
+        // oposto da bola cancela a assistência (o jogador desiste da bola).
+        const loose = !o && hyp(b.x - cc.x, b.y - cc.y) < 6 && this.chase[H][0] === cc;
+        if (!o && (b.target === cc || loose)) {
+          const it = this.intercept(cc), ix = it.x - cc.x, iy = it.y - cc.y, id = hyp(ix, iy);
+          if (id > 0.4) {
+            const ux = ix / id, uy = iy / id, dot = ux * sx + uy * sy;
+            if (dot > -0.35) {
+              let mx = ux * 0.8 + sx * 0.35, my = uy * 0.8 + sy * 0.35; const ml = hyp(mx, my) || 1;
+              const sp = Math.min(1, id / 1.6);
+              cc.mx = (mx / ml) * sp; cc.my = (my / ml) * sp;
+              cc.sprint = !!inp.sprint || id > 7;
+            }
+          }
+        }
+      }
+      if (!this.assist) this.lastStick = [sx / mag, sy / mag];
     }
     const dir = this.assist ? null : [sx / mag, sy / mag];
     // bola vindo para o nosso jogador (passe nosso ou bola solta perto dele): a ação fica guardada
@@ -757,6 +777,8 @@ export class Game {
     if ((b.type === "pass" || b.type === "lob") && b.last && b.last !== p) { if (b.last.team === p.team) this.stats.passOk[p.team]++; else this.stats.inter[p.team]++; }
     b.owner = p; b.last = p; b.type = "own"; b.target = null; b.vz = 0; b.z = 0; b.gkPlan = null;
     p.protect = 14; p.think = 5 + ((rnd() * 8) | 0); p.plan = null; p.rushed = false; p.gotAt = this.tickN; b.through = false;
+    // primeiro toque: o jogador controlado ajeita a bola para onde o analógico aponta
+    if (this.human === p.team && !p.isGK && this.lastStick) { p.fx = this.lastStick[0]; p.fy = this.lastStick[1]; }
     if (this.human === p.team && !p.isGK) this.setCtrl(p);
   }
   touch(p) {
