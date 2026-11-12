@@ -104,7 +104,7 @@ export function runMatch(root, opts) {
           <h3>Jogo pausado</h3>
           <button class="btn primary" data-act="resume">Continuar</button>
           <button class="btn" data-act="skip">Simular o resto</button>
-          <p class="hint"><b>Controle com a bola:</b> A passe · X passe alto/cruzamento · Y enfiada (LB+Y por cima) · B chute (RB+B colocado) · RT correr · LT proteger · RB condução colada. Apertar antes da bola chegar = toque de primeira.</p>
+          <p class="hint"><b>Controle com a bola:</b> A passe rasteiro (segurar = mais forte e mais longe) · X bola alta/cruzamento · Y enfiada (LB+Y por cima) · B chute (segurar = mais força; RB+B colocado) · RT correr · LT proteger · RB condução colada. Apertar antes da bola chegar = toque de primeira.</p>
           <p class="hint"><b>Sem a bola:</b> A toque = troca, A segurado = conter · LB troca · analógico direito troca na direção · RB companheiro pressiona · LT acompanhar de frente · B ou X bote. Start pausa (no menu: A continua, Y simula o resto).</p>
           <p class="hint"><b>Toque:</b> analógico à esquerda; PASSE (segure para passe alto), ENFIADA, CHUTE (segure para dar força), CORRER. Sem a bola: PASSE troca e CHUTE dá o bote.</p>
           <p class="hint"><b>Teclado:</b> setas/WASD · J passe (segurar sem a bola: conter) · H passe alto · U enfiada · K chute (E+K colocado) · Shift correr · Q proteger · E condução colada/pressão · C trocar · P pausa.</p>
@@ -215,6 +215,7 @@ export function runMatch(root, opts) {
       const ml = Math.hypot(sx, sy); if (ml > 1) { sx /= ml; sy /= ml; }
       if (portrait) { input.x = -sy; input.y = sx; input.rx = -ry; input.ry = rx; } else { input.x = sx; input.y = sy; input.rx = rx; input.ry = ry; }
       input.pass = pass; input.lob = lob; input.shoot = shoot; input.through = through; input.sw = sw; input.mod = mod; input.lt = lt; input.rb = rb; input.sprint = sprint;
+      input.holdLob = touch.pass;   // só no toque (não há botão X na tela): segurar PASSE levanta a bola
     }
 
     /* ---------- pausa ---------- */
@@ -325,7 +326,7 @@ export function runMatch(root, opts) {
           const bw = 30, bx = x - bw / 2, by = y - S * 1.5 - 9;
           ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(bx, by, bw, 4);
           ctx.fillStyle = c.tired ? "#ff6b5e" : "#3ddc84"; ctx.fillRect(bx, by, bw * clamp(c.stamina, 0, 1), 4);
-          if (m.charge > 0) { ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(bx - 5, by - 9, bw + 10, 6); ctx.fillStyle = m.chargeKind === "shot" ? (m.charge > 0.8 ? "#ff6b5e" : "#ffb300") : m.chargeKind === "through" ? "#ce93d8" : "#29b6f6"; ctx.fillRect(bx - 5, by - 9, (bw + 10) * m.charge, 6); }
+          if (m.charge > 0) { ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(bx - 5, by - 9, bw + 10, 6); ctx.fillStyle = m.chargeKind === "shoot" ? (m.charge > 0.85 ? "#ff6b5e" : "#ffb300") : m.chargeKind === "through" ? "#ce93d8" : "#29b6f6"; ctx.fillRect(bx - 5, by - 9, (bw + 10) * m.charge, 6); }
         }
       }
       if (hasHuman && m.nextSw && m.state === "play") {   // quem assume se apertar a troca

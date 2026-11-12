@@ -9,10 +9,10 @@ Funciona no **celular** (toque), no **computador** (teclado ou controle) e no **
 | Ação | Toque | Controle (Xbox, padrão FIFA) | Teclado |
 | --- | --- | --- | --- |
 | Mover | Analógico fixo à esquerda | Analógico esquerdo / direcional | Setas ou WASD |
-| Passe | `PASSE` (toque rápido) | A | J |
-| Passe alto / cruzamento | segure `PASSE` | X (ou segure A) | H |
+| Passe rasteiro (segurar = mais forte e mais longe) | `PASSE` | A | J |
+| Bola alta / cruzamento | segure `PASSE` | X | H |
 | Enfiada (bola no espaço) | `ENFIADA` | Y · LB+Y por cima | U |
-| Chute | segure `CHUTE` para dar força | B | K |
+| Chute (segurar = mais força, carga cheia em ~0,4 s) | `CHUTE` | B | K |
 | Chute colocado (com curva) | — | RB+B | E+K |
 | Correr | `CORRER` | RT | Shift |
 | Proteger a bola | — | LT | Q |

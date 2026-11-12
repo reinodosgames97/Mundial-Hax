@@ -166,6 +166,49 @@ const dirTo = (a, b) => { const l = hyp(b.x - a.x, b.y - a.y) || 1; return [(b.x
   check(g2.ball.vz > 3 && g2.ball.type === "lob", `X faz passe alto (altura inicial ${g2.ball.vz.toFixed(1)} m/s)`);
 }
 
+/* 5b) passe no A: sempre rasteiro e firme; segurar = mais forte e mais longe (bola alta é só no X) */
+{
+  const setup = s => {
+    const g = newGame(s);
+    g.setPiece = null; g.state = "play"; g.ball.held = false;
+    for (const p of g.players) { p.vx = p.vy = 0; p.stun = 0; }
+    const mid = g.teams[0].find(p => p.pos === "M"); mid.x = -5; mid.y = 0;
+    const near = g.teams[0].filter(p => p.pos === "A")[0], far = g.teams[0].filter(p => p.pos === "A")[1];
+    near.x = 6; near.y = 0.5; far.x = 26; far.y = -0.5;
+    g.ball.owner = null; g.own(mid); g.setCtrl(mid);
+    for (let i = 0; i < 4; i++) g.tick(NONE);
+    return { g, near, far };
+  };
+  let vt = 0, vh = 0, ground = 0, farHit = 0, nearHit = 0, n = 0;
+  for (let s = 201; s <= 208; s++) {
+    const a = setup(s); press(a.g, "pass", 3, [1, 0]);
+    const b = setup(s); press(b.g, "pass", 30, [1, 0]);
+    n++;
+    vt += hyp(a.g.ball.vx, a.g.ball.vy); vh += hyp(b.g.ball.vx, b.g.ball.vy);
+    if (a.g.ball.target === a.near) nearHit++;
+    if (b.g.ball.target === b.far) farHit++;
+    if (b.g.ball.vz === 0 && b.g.ball.type === "pass" && a.g.ball.vz === 0) ground++;
+  }
+  check(ground === n, `A segurado continua rasteiro (${ground}/${n})`);
+  check(vt / n >= 20, `passe curto sai firme (${(vt / n).toFixed(1)} m/s)`);
+  check(nearHit === n && farHit === n && vh / n > vt / n + 8, `toque vai no companheiro perto, segurado vai no de longe e mais forte (${nearHit}/${n}, ${farHit}/${n}, ${(vh / n).toFixed(1)} m/s)`);
+}
+
+/* 5c) chute: toque rápido já sai forte; carga completa em menos de meio segundo */
+{
+  const shot = (s, hold) => {
+    const g = newGame(s);
+    g.setPiece = null; g.state = "play"; g.ball.held = false;
+    const fwd = g.teams[0].find(p => p.pos === "A"); fwd.x = 30; fwd.y = 2; fwd.vx = fwd.vy = 0;
+    g.ball.owner = null; g.own(fwd); g.setCtrl(fwd);
+    for (let i = 0; i < 4; i++) g.tick(NONE);
+    press(g, "shoot", hold, [1, 0]);
+    return hyp(g.ball.vx, g.ball.vy);
+  };
+  const tap = shot(211, 4), half = shot(212, 14), full = shot(213, 26);
+  check(tap >= 31 && half >= 36 && full >= 43, `chute: toque ${tap.toFixed(1)}, meio ${half.toFixed(1)}, cheio ${full.toFixed(1)} m/s`);
+}
+
 /* ---------- defesa, proteção, chute colocado, cruzamento e troca após perder a bola ---------- */
 // coloca a bola com um jogador e o controle num jogador nosso, sem bola parada
 function scene(s, opp = 0.05) {

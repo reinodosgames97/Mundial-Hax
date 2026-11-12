@@ -282,17 +282,17 @@ export class Game {
       if (this.tickN - q.at > 100 || (o && o.team !== H)) this.queued = null;
       else if (o === cc && cc.kickCd === 0 && this.tickN - (cc.gotAt || 0) >= 4) {
         this.queued = null; this.firstTime = true;
-        this.doAction(cc, q.k, q.hold, q.dir || dir, q.mod, q.fin);
+        this.doAction(cc, q.k, q.hold, q.dir || dir, q.mod, q.fin, q.hl);
         this.firstTime = false;
       }
     }
     // botões de ação: soltar executa; segurar até o máximo também executa
-    const MAX = { pass: 54, lob: 46, shoot: 48, through: 40 };
+    const MAX = { pass: 34, lob: 40, shoot: 30, through: 36 };
     this.charge = 0; this.chargeKind = "";
     for (const k of ["pass", "lob", "shoot", "through"]) {
       const st = (I[k] ||= { down: false, t: 0, used: true }), down = !!inp[k];
       if (down && !st.down) {
-        st.t = 0; st.used = false;
+        st.t = 0; st.used = false; st.hl = !!inp.holdLob;
         st.def = false;
         if (!mine && !incoming) {   // sem a bola: PASSE troca (toque) ou contém (segurado); CHUTE/ALTO dão o bote
           if (k === "pass") st.def = true;
@@ -304,25 +304,28 @@ export class Game {
       if (!down && st.down && st.def && st.t < 10 && !mine) this.switchCtrl();
       if (!st.used && ((!down && st.down) || (down && st.t >= MAX[k]))) {
         st.used = true;
-        if (b.owner === cc && cc.kickCd === 0) this.doAction(cc, k, st.t, dir, !!inp.mod, !!inp.rb);
-        else if (incoming || b.target === cc) this.queued = { k, hold: st.t, dir, mod: !!inp.mod, fin: !!inp.rb, at: this.tickN };
+        if (b.owner === cc && cc.kickCd === 0) this.doAction(cc, k, st.t, dir, !!inp.mod, !!inp.rb, st.hl);
+        else if (incoming || b.target === cc) this.queued = { k, hold: st.t, dir, mod: !!inp.mod, fin: !!inp.rb, hl: st.hl, at: this.tickN };
       }
-      if (down && !st.used && (b.owner === cc || incoming) && st.t > (k === "pass" ? 14 : 3)) {
-        this.charge = clamp(st.t / MAX[k], 0, 1); this.chargeKind = k === "pass" ? "lob" : k;
+      if (down && !st.used && (b.owner === cc || incoming) && st.t > (k === "pass" ? 7 : 3)) {
+        this.charge = clamp(st.t / MAX[k], 0, 1); this.chargeKind = k;
       }
       st.down = down;
     }
   }
-  doAction(c, k, hold, dir, mod, fin) {
+  doAction(c, k, hold, dir, mod, fin, holdLob) {
     const dx = dir ? dir[0] : c.fx, dy = dir ? dir[1] : c.fy;
-    if (k === "pass") this.humanPass(c, dx, dy, hold, false);
+    if (k === "pass") this.humanPass(c, dx, dy, hold, false, holdLob);
     else if (k === "lob") this.humanPass(c, dx, dy, hold, true);
     else if (k === "through") this.humanThrough(c, dx, dy, hold, mod);
-    else this.humanShoot(c, dir, clamp(hold / 46, 0.12, 1), fin);
+    else this.humanShoot(c, dir, clamp(hold / 26, 0.22, 1), fin);
   }
   // passe semi-assistido: escolhe o companheiro na direção do analógico e ajusta força e direção
-  humanPass(c, sx, sy, hold, forceLob) {
-    const lob = forceLob || hold > 16, power = forceLob ? clamp(hold / 40, 0, 1) : clamp((hold - 16) / 38, 0, 1);
+  humanPass(c, sx, sy, hold, forceLob, holdLob) {
+    // A = sempre rasteiro: toque rápido vai no companheiro mais próximo na direção; segurar manda mais forte e mais longe.
+    // Bola alta é no X (no toque, que não tem X, segurar PASSE ainda levanta a bola).
+    const lob = forceLob || (!!holdLob && hold > 16);
+    const power = forceLob ? clamp(hold / 36, 0, 1) : lob ? clamp((hold - 16) / 18, 0, 1) : clamp((hold - 5) / 26, 0, 1);
     // pelo lado, no terço final: passe alto vira cruzamento para quem está na área
     if (lob && this.wide(c)) {
       let tgt = null, ts = 1e9;
@@ -341,22 +344,22 @@ export class Game {
       if (dist < 3 || dist > (lob ? 58 : 40)) continue;
       const ang = Math.acos(clamp((dx * sx + dy * sy) / dist, -1, 1));
       if (ang > 0.82) continue;
-      let s = ang * 26 + Math.abs(dist - (lob ? 20 + power * 26 : 13)) * (lob ? 0.4 : 0.3) + (m.isGK ? 9 : 0);
+      let s = ang * 26 + Math.abs(dist - (lob ? 20 + power * 26 : 11 + power * 21)) * (lob ? 0.4 : 0.3) + (m.isGK ? 9 : 0);
       if (!lob) for (const o of this.teams[1 - c.team]) { const t = ((o.x - c.x) * dx + (o.y - c.y) * dy) / (dist * dist); if (t > 0.1 && t < 0.95 && hyp(c.x + dx * t - o.x, c.y + dy * t - o.y) < 1.2) { s += 6; break; } }
       if (s < bs) { bs = s; best = m; }
     }
     if (!best) {
-      const dist = lob ? 18 + power * 26 : 14;
-      this.kickPass(c, c.x + sx * dist, c.y + sy * dist, lob, null);
+      const dist = lob ? 18 + power * 26 : 13 + power * 16;
+      this.kickPass(c, c.x + sx * dist, c.y + sy * dist, lob, null, power);
       return;
     }
-    const d0 = hyp(best.x - c.x, best.y - c.y), t = lob ? clamp(d0 / 21, 0.7, 2.3) : d0 / (11 + d0 * 0.45);
+    const d0 = hyp(best.x - c.x, best.y - c.y), t = lob ? clamp(d0 / 21, 0.7, 2.3) : d0 / ((13 + d0 * 0.58) * (1 + power * 0.22));
     const ax = best.x + best.vx * t * 0.9, ay = best.y + best.vy * t * 0.9;
     let a = Math.atan2(ay - c.y, ax - c.x), sa = Math.atan2(sy, sx), df = sa - a;
     while (df > Math.PI) df -= 2 * Math.PI; while (df < -Math.PI) df += 2 * Math.PI;
     a += df * 0.2;
     const dist = hyp(ax - c.x, ay - c.y);
-    this.kickPass(c, c.x + Math.cos(a) * dist, c.y + Math.sin(a) * dist, lob, best);
+    this.kickPass(c, c.x + Math.cos(a) * dist, c.y + Math.sin(a) * dist, lob, best, power);
   }
   // enfiada (Y / triângulo): bola no espaço à frente do companheiro na direção do analógico.
   // Segurar mais = bola mais longa. Com LB segurado sai pelo alto.
@@ -426,14 +429,14 @@ export class Game {
     this.setPiece = null;
     if (this.human === p.team && target && !target.isGK) this.setCtrl(target);
   }
-  kickPass(p, tx, ty, lob, target) {
+  kickPass(p, tx, ty, lob, target, power = 0) {
     const dx = tx - p.x, dy = ty - p.y, dist = hyp(dx, dy) || 1;
     const press = this.setPiece ? 9 : this.nearestOpp(p).dist;
     const err = (0.014 + (100 - p.a.pas) * 0.0011) * this.par[p.team].passErr * (press < 2.5 ? 1.5 : 1) * (lob ? 1.35 : 1) * (this.firstTime ? 1.25 : 1);
     const ang = Math.atan2(dy, dx) + nrm() * err;
     let vh, vz = 0;
     if (lob) { const T = clamp(dist / 21, 0.7, 2.3); vh = (dist / T) * 1.1; vz = (GRAV * T) / 2; }
-    else vh = clamp(7.5 + dist * 0.84, 11, 34);
+    else vh = clamp((13 + dist * 0.95) * (1 + power * 0.22), 17, 40);
     this.stats.passes[p.team]++;
     this.kick(p, Math.cos(ang), Math.sin(ang), vh, vz, lob ? "lob" : "pass", target);
   }
@@ -485,11 +488,11 @@ export class Game {
     const dx = tx - p.x, dy = ty - p.y, press = this.nearestOpp(p).dist;
     const e = (0.05 + (100 - p.a.sho) * 0.0022) * this.par[p.team].shotErr * (1 + power * 0.7) * (press < 2 ? 1.35 : 1) * (this.firstTime ? 1.2 : 1);
     let ang = Math.atan2(dy, dx) + nrm() * e * (fin ? 0.5 : 1);
-    let sp = 21 + 15 * power + p.a.sho * 0.05;
-    let vz = 0.6 + power * power * 9 * (0.35 + rnd() * 0.75), curve = 0;
+    let sp = 25 + 15 * power + p.a.sho * 0.05;
+    let vz = 0.5 + power * power * power * 9 * (0.35 + rnd() * 0.75), curve = 0;
     if (fin) {
       // colocado: mais fraco, sai por fora do alvo e curva de volta para dentro (o goleiro lê a linha reta)
-      sp = 16 + 8 * power + p.a.sho * 0.05;
+      sp = 19 + 8 * power + p.a.sho * 0.05;
       vz = 0.3 + power * 2.2 * (0.5 + rnd() * 0.6);
       const T = hyp(dx, dy) / sp, delta = 0.07 * (ty >= 0 ? 1 : -1) * p.dir;
       ang += delta; curve = (-2 * delta) / T;
@@ -713,7 +716,7 @@ export class Game {
     return false;
   }
   aiPass(p, m, lob) {
-    const dist = hyp(m.x - p.x, m.y - p.y), t = lob ? clamp(dist / 21, 0.7, 2.3) : dist / (11 + dist * 0.45);
+    const dist = hyp(m.x - p.x, m.y - p.y), t = lob ? clamp(dist / 21, 0.7, 2.3) : dist / (13 + dist * 0.58);
     this.kickPass(p, m.x + m.vx * t * 0.9, m.y + m.vy * t * 0.9, lob, m);
   }
   aiKeeper(p) {
@@ -900,7 +903,7 @@ export class Game {
       if (b.type === "shot" && b.last && b.last.team !== p.team) {
         if (b.saveRoll) return;
         b.saveRoll = true; this.stats.target[1 - p.team]++;
-        const prob = clamp(0.42 + (p.a.gk - 60) * 0.009 - Math.max(0, sp - 22) * 0.02 + (p.dive ? 0 : 0.08) + this.par[p.team].gkb, 0.08, 0.92);
+        const prob = clamp(0.42 + (p.a.gk - 60) * 0.009 - Math.max(0, sp - 27) * 0.016 + (p.dive ? 0 : 0.08) + this.par[p.team].gkb, 0.08, 0.92);
         if (rnd() >= prob) {
           if (rnd() < 0.5 + (p.a.gk - 60) * 0.008) {   // espalma
             const d = p.dir, s = sp * 0.38;
@@ -915,7 +918,7 @@ export class Game {
       this.own(p); b.held = true;
       return;
     }
-    if ((b.type === "pass" || b.type === "lob") && b.last && b.last.team !== p.team && sp > 8 + p.a.def * 0.07) {
+    if ((b.type === "pass" || b.type === "lob") && b.last && b.last.team !== p.team && sp > 10 + p.a.def * 0.12) {
       // passe firme: o marcador só resvala e a bola segue
       this.stats.defl++;
       const a = (rnd() - 0.5) * 0.5, c = Math.cos(a), sn = Math.sin(a), vx = b.vx * 0.8, vy = b.vy * 0.8;
