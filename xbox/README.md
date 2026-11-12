@@ -2,7 +2,15 @@
 
 Este projeto é uma casca UWP em C# com um **WebView2** em tela cheia. Ele empacota os arquivos do jogo (`index.html`, `css/`, `js/`) que estão na raiz do repositório e os mostra dentro do aplicativo. O controle funciona direto: o jogo lê o gamepad (menus e partida) e o botão B não fecha o aplicativo.
 
-> **Aviso:** o projeto foi escrito sem um Windows à mão, então **ainda não foi compilado nem testado em um console**. O jogo em si foi testado com um controle simulado no navegador (menus e partida). Se o Visual Studio reclamar de algo no `.csproj`, use o "Plano B" abaixo, que recria o projeto pelo assistente e só copia quatro arquivos.
+> **Estado:** o projeto **compila e gera o pacote no GitHub Actions** (workflow `Pacote Xbox (UWP)`), mas **ainda não foi instalado nem testado em um console**. O jogo em si foi testado com um controle simulado no navegador (menus e partida). Se o Visual Studio reclamar de algo no `.csproj`, use o "Plano B" abaixo.
+
+## Caminho mais curto: pacote pronto do GitHub (sem Visual Studio)
+
+1. No GitHub: **Actions → Pacote Xbox (UWP)** → abra a última execução verde → baixe o artefato **MundialHax-Xbox** (um `.zip`; se não houver execução recente, use *Run workflow*).
+2. Extraia o zip. Dentro há uma pasta `MundialHax_..._Test` com o pacote (`.msix`), o certificado (`.cer`) e a subpasta `Dependencies\x64` (bibliotecas VCLibs etc.).
+3. No Xbox em modo desenvolvedor, abra o **Dev Home** para ver o endereço do **Device Portal** e abra-o no navegador do PC.
+4. **My games & apps → Add** (ou *Install app*): envie o `.msix` e, como dependências, os arquivos de `Dependencies\x64`. Se o portal pedir um certificado, envie o `.cer` **da mesma execução** (cada execução gera um certificado novo).
+5. Depois de instalar, o jogo fica na lista de jogos e aplicativos do modo desenvolvedor e abre sem o PC.
 
 ## O que você precisa
 
