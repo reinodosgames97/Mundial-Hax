@@ -23,7 +23,7 @@ export class Match {
     const d = clamp((r0 - r1) / 60, -0.2, 0.2);
     const human = cfg.human === 0 || cfg.human === 1 ? cfg.human : null;
     const base = DIFF_BASE[cfg.diff ?? 1];
-    const lv = human === null ? [0.62 + d, 0.62 - d] : human === 0 ? [0.6 + d, base - d] : [base + d, 0.6 - d];
+    const lv = cfg.levels || (human === null ? [0.62 + d, 0.62 - d] : human === 0 ? [0.6 + d, base - d] : [base + d, 0.6 - d]);
     this.ai = [new TeamAI(this.w, 0, lv[0]), new TeamAI(this.w, 1, lv[1])];
     this.human = human;
     this.ctrl = null;                 // jogador controlado
@@ -48,11 +48,11 @@ export class Match {
   }
   setCtrl(p) {
     if (this.ctrl === p) return;
-    if (this.ctrl) { this.ctrl.human = false; this.ctrl.ix = this.ctrl.iy = 0; this.ctrl.kick = false; this.ctrl.power = 1; }
+    if (this.ctrl) { this.ctrl.human = false; this.ctrl.ix = this.ctrl.iy = 0; this.ctrl.kick = false; }
     this.ctrl = p;
     if (p) { p.human = true; p.speed = p.humanSpeed; p.power = p.humanPower; }
     for (const a of this.ai) a.bind();
-    if (p) { p.speed = p.humanSpeed; }
+    if (p) { p.speed = p.humanSpeed; p.power = p.humanPower; }
     this.switchCd = 24;
   }
   placeKickoff() {

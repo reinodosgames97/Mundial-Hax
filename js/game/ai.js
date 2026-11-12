@@ -28,12 +28,14 @@ export class TeamAI {
     this.noise = Math.max(0.03, 0.5 - 0.43 * L);
     this.tol = 0.6 - 0.3 * Math.min(L, 1);
     this.pred = 0.35 + 0.65 * Math.min(L, 1);
-    this.speed = 0.84 + 0.2 * L;
+    this.speed = 0.8 + 0.26 * L;
+    this.power = 0.86 + 0.18 * Math.min(L, 1);
+    this.gkLag = Math.round(10 - 9 * Math.min(L, 1));
   }
   bind() {
     this.mates = this.w.players.filter(p => p.team === this.team);
     this.opps = this.w.players.filter(p => p.team !== this.team);
-    for (const p of this.mates) if (!p.human) p.speed = this.speed;
+    for (const p of this.mates) if (!p.human) { p.speed = this.speed; p.power = this.power; }
   }
   predict(p) {
     const b = this.w.ball, P = this.w.p;
@@ -83,6 +85,7 @@ export class TeamAI {
       p.kick = near < KICK_RANGE + 1 && dir * (b.x - p.x) > -4;
       return;
     }
+    if (this.gkLag > 1 && this.t % this.gkLag && p.gkT) { this.moveTo(p, p.gkT.x, p.gkT.y, 14); p.kick = near < KICK_RANGE + 1 && dir * (b.x - p.x) > 0; return; }
     let ty = b.y * (0.42 + 0.3 * L);
     // intercepta chutes a caminho do gol
     if (b.vx * dir < -0.6) {
@@ -91,7 +94,8 @@ export class TeamAI {
     }
     ty = clamp(ty, -P.GOAL + 6, P.GOAL - 6);
     const out = clamp((P.HW * 0.75 - Math.abs(b.x - gx)) / 14, 0, 26);
-    this.moveTo(p, gx + dir * out, ty, 14);
+    p.gkT = { x: gx + dir * out, y: ty };
+    this.moveTo(p, p.gkT.x, p.gkT.y, 14);
     p.kick = near < KICK_RANGE + 1 && dir * (b.x - p.x) > 0;
   }
   chase(p, oppNear) {

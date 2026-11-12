@@ -53,9 +53,9 @@ label.field > span { display: block; margin-bottom: 6px; }
 /* ---------- escudos ---------- */
 .crest { --s: 28px; position: relative; display: inline-flex; flex: none; width: var(--s); height: var(--s); align-items: center; justify-content: center; border-radius: 50%; background: var(--c1, #444); border: 2px solid var(--c2, #fff); overflow: hidden; vertical-align: middle; }
 .crest > span { font-size: calc(var(--s) * .3); font-weight: 800; color: #fff; mix-blend-mode: difference; letter-spacing: -.02em; }
-.crest > img { position: absolute; inset: -2px; width: calc(100% + 4px); height: calc(100% + 4px); object-fit: contain; background: var(--panel); }
+.crest > img { position: absolute; inset: -2px; width: calc(100% + 4px); height: calc(100% + 4px); object-fit: contain; opacity: 0; }
 .crest.ok { border-color: transparent; background: transparent; border-radius: 0; }
-.crest.ok > img { background: transparent; }
+.crest.ok > img { opacity: 1; }
 .crest.ok > span { display: none; }
 
 /* ---------- tela inicial ---------- */
@@ -148,7 +148,7 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 13.5px; font-varia
 .mv-num i { font-style: normal; min-width: 16px; text-align: center; } .mv-num em { font-style: normal; font-size: 13px; color: #fff9; }
 .mv-clock { background: #000a; border-radius: 10px; padding: 7px 10px; font-weight: 800; font-size: 14px; min-width: 50px; text-align: center; font-variant-numeric: tabular-nums; }
 .mv-pause { pointer-events: auto; position: absolute; left: calc(8px + var(--sal)); top: 0; width: 40px; height: 36px; border-radius: 10px; border: 0; background: #000a; font-size: 13px; }
-.mv-title { position: absolute; top: calc(44px + var(--sat)); left: 0; right: 0; text-align: center; font-size: 11px; color: #fffa; pointer-events: none; text-shadow: 0 1px 2px #000; }
+.mv-title { animation: mvfade 1s 5s forwards; position: absolute; top: calc(44px + var(--sat)); left: 0; right: 0; text-align: center; font-size: 11px; color: #fffa; pointer-events: none; text-shadow: 0 1px 2px #000; }
 .mv-msg { position: absolute; left: 0; right: 0; top: 38%; text-align: center; font-size: 34px; font-weight: 900; letter-spacing: .01em; text-shadow: 0 3px 0 #000a, 0 0 24px #000; opacity: 0; transform: scale(.8); transition: opacity .2s, transform .2s; pointer-events: none; padding: 0 12px; }
 .mv-msg.show { opacity: 1; transform: scale(1); }
 .mv-msg.good { color: var(--accent); } .mv-msg.bad { color: var(--bad); }
@@ -166,6 +166,8 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 13.5px; font-varia
 .mv-menu { position: absolute; inset: 0; background: #000b; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .mv-menu-box { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; width: min(340px, 100%); display: flex; flex-direction: column; gap: 10px; text-align: center; }
 
+@keyframes mvfade { to { opacity: 0; } }
+
 /* ---------- pênaltis ---------- */
 .pk { position: absolute; inset: 0; background: #0b1a10f2; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 5; }
 .pk-box { width: min(440px, 100%); text-align: center; }
@@ -175,7 +177,7 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 13.5px; font-varia
 .pk-marks i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin: 0 2px; }
 .pk-marks i.ok { background: var(--accent); } .pk-marks i.no { background: var(--bad); }
 .pk-goal { position: relative; aspect-ratio: 2.3 / 1; border: 6px solid #fff; border-bottom: 0; border-radius: 6px 6px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); background: repeating-linear-gradient(0deg, #fff2 0 1px, transparent 1px 14px), repeating-linear-gradient(90deg, #fff2 0 1px, transparent 1px 14px), #0006; margin-bottom: 56px; }
-.pk-zone { background: transparent; border: 1px dashed #fff3; }
+.pk-zone { background: transparent; border: 1px dashed #fff6; }
 .pk-zone:active { background: #fff3; }
 .pk-goal.busy .pk-zone { pointer-events: none; border-color: transparent; }
 .pk-keeper { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 3px solid #111; left: 50%; top: 62%; transition: left .35s ease-out, top .35s ease-out; pointer-events: none; background: #f5c518; }

@@ -94,7 +94,7 @@ export function runMatch(root, opts) {
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
       portrait = h > w;
       el.classList.toggle("portrait", portrait);
-      const hud = 46;
+      const hud = portrait ? 62 : 46;
       const L = (P.HW + P.GD + 12) * 2, Wd = (P.HH + 14) * 2;
       if (portrait) {
         band = opts.human === null || opts.human === undefined ? 0 : Math.max(130, Math.min(190, h * 0.2));
@@ -343,6 +343,7 @@ export function shootout(root, opts, cols) {
     }
     function play(shot, dive) {
       goal.classList.add("busy");
+      info.textContent = ""; info.className = "pk-info";
       const ok = resolveKick(shot, dive);
       const [bx, by] = zonePos(shot), [kx, ky] = zonePos(dive);
       keeper.style.left = kx + "%"; keeper.style.top = ky + "%";

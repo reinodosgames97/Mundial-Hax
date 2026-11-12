@@ -228,12 +228,27 @@ export function simUser(G, d) {
 }
 
 /* ---------------------------- consultas ---------------------------- */
+// fase em que um clube já classificado ainda vai entrar (ou null)
+export function pendingEntry(G, c, id) {
+  if (c.done) return null;
+  const n = c.stages.length;
+  if (c.id === "CDB") {
+    const names = ["Segunda fase", "Terceira fase", "Quarta fase", "Quinta fase"];
+    for (let i = Math.max(0, n - 1); i < 4; i++) if (c.x.wait?.[i]?.includes(id)) return names[i];
+  } else if (c.id === "LIB") {
+    if (n < 2 && G.q.lib.P2.includes(id)) return "Segunda fase";
+    if (n < 4 && G.q.lib.G.includes(id)) return "Fase de grupos";
+  } else if (c.id === "SUL") {
+    if (n < 2 && G.q.sul.G.includes(id)) return "Fase de grupos";
+  }
+  return null;
+}
 export function compsOf(G, id) {
   const out = [];
   for (const cid of ORDER) {
     const c = G.comps[cid];
     if (!c) continue;
-    if (c.stages.some(st => stageHas(st, id))) out.push(c);
+    if (c.stages.some(st => stageHas(st, id)) || pendingEntry(G, c, id)) out.push(c);
   }
   return out;
 }
@@ -266,6 +281,8 @@ export function standing(G, c, id) {
       else res = { text: st.name === "Final" ? "Vice-campeão" : "Eliminado: " + st.name, stage: st.name, out: true };
     }
   }
+  const pend = pendingEntry(G, c, id);
+  if (!res && pend) res = { text: "Entra na " + pend.toLowerCase(), stage: pend, waiting: true };
   if (c.done && c.champion === id) res = { ...(res || {}), text: "Campeão", champion: true };
   else if (c.done && c.runner === id && res && !res.out) res = { ...res, text: res.pos ? res.text : "Vice-campeão" };
   return res;

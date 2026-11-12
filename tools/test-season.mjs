@@ -8,7 +8,7 @@ import { ORDER } from "../js/core/comps.js";
 const N = +(process.argv[2] || 6), who = process.argv[3] || "Flamengo";
 seed(+(process.argv[4] || 12345));
 const assert = (c, m) => { if (!c) { console.error("FALHOU:", m); process.exitCode = 1; throw new Error(m); } };
-let G = newGame({ clubId: findClub(who, "BR"), diff: 1 });
+let G = newGame({ clubId: findClub(who, "BR") ?? findClub(who), diff: 1 });
 assert(G.userClub, "clube não encontrado");
 for (let s = 0; s < N; s++) {
   const t0 = Date.now();

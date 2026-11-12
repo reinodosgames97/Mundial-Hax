@@ -106,7 +106,7 @@ function vHub() {
   const body = ui.tab === "home" ? tHome() : ui.tab === "tables" ? tTables() : ui.tab === "games" ? tGames() : ui.tab === "stats" ? tStats() : tOpts();
   return page(`${crest(me, 26)} ${esc(cname(me))}`, sub, body, { nav: true });
 }
-const sideCard = (id, where) => `<div class="side">${crest(id)}<span>${esc(cname(id))}</span><small>${where} · Força ${rating(id)}</small></div>`;
+const sideCard = (id, where) => `<div class="side">${crest(id)}<span>${esc(cname(id))}</span><small>${where ? where + " · " : ""}Força ${rating(id)}</small></div>`;
 function tHome() {
   const me = G.userClub;
   let next;

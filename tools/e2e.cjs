@@ -1,9 +1,9 @@
-// Teste ponta a ponta no navegador (Playwright): node tools/e2e.cjs [url] [pasta-de-capturas]
+// Teste ponta a ponta no navegador (Playwright): node tools/e2e.cjs [url] [pasta-de-capturas] [clube] [aba: A|B|C|D]
 // Requer o servidor rodando: node tools/serve.mjs 8123
 const { chromium } = require("playwright");
 const URL = process.argv[2] || "http://localhost:8123/";
 const SH = (process.argv[3] || "shots") + "/";
-const CLUB = process.argv[4] || "Flamengo";
+const CLUB = process.argv[4] || "Flamengo", TAB = process.argv[5] || "A";
 require("fs").mkdirSync(SH, { recursive: true });
 
 (async () => {
@@ -24,6 +24,7 @@ require("fs").mkdirSync(SH, { recursive: true });
   await page.waitForTimeout(2500);
   await shot("02-escolha");
   await page.fill("#coach", "Teste");
+  if (TAB !== "A") { await page.click(`[data-act="picktab"][data-v="${TAB}"]`); await page.waitForTimeout(800); }
   for (const b of await page.$$(".pick")) if ((await b.innerText()).includes(CLUB)) { await b.click(); break; }
   await page.click('[data-act="start"]');
   await page.waitForSelector(".next");
